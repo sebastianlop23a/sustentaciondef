@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Resumen de Venta</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0d0d0d;
+            color: #f2f2f2;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* CONTENEDOR GENERAL */
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        /* TARJETA PRINCIPAL */
+        .resumen-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 18px rgba(0,0,0,0.55);
+            border: 1px solid #2a2a2a;
+        }
+
+        /* CABECERA SUPERIOR */
+        .header {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header img.logo {
+            height: 70px;
+            justify-self: start;
+        }
+
+        .header img.qr {
+            height: 110px;
+            justify-self: end;
+        }
+
+        /* TÍTULO CENTRADO ENTRE LOGO Y QR */
+        .header-center {
+            text-align: center;
+        }
+
+        .header-center h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #e50914;
+            margin: 0;
+        }
+
+        .header-center .factura {
+            font-size: 18px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* GRID INFORMACIÓN GENERAL */
+        .info-grid {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .info-box {
+            background: #111;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+
+        .info-label {
+            font-size: 12px;
+            opacity: 0.6;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 15px;
+            font-weight: bold;
+            margin-top: 3px;
+            color: #fff;
+        }
+
+        /* PRODUCTOS */
+        .productos {
+            margin-top: 30px;
+        }
+
+        .productos h2 {
+            font-size: 22px;
+            color: #e50914;
+            border-left: 4px solid #e50914;
+            padding-left: 10px;
+        }
+
+        .producto-item {
+            background: #111;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .producto-nombre {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .producto-precio {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        /* TOTALES */
+        .totales-box {
+            background: #111;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 16px;
+        }
+
+        .total-final {
+            font-size: 22px;
+            font-weight: bold;
+            padding-top: 12px;
+            border-top: 2px solid #444;
+            margin-top: 10px;
+            color: #e50914;
+        }
+
+        /* BOTONES */
+        .actions {
+            margin-top: 35px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            color: white;
+            transition: 0.2s;
+        }
+
+        .btn-pdf { background: #e50914; }
+        .btn-pdf:hover { background: #b00710; }
+
+        .btn-print { background: #444; }
+        .btn-print:hover { background: #555; }
+
+        .btn-new { background: #0a84ff; }
+        .btn-new:hover { background: #006edc; }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .header img.logo, .header img.qr {
+                justify-self: center;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="resumen-card">
+
+        <!-- CABECERA SUPERIOR -->
+        <div class="header">
+
+            <!-- LOGO -->
+            <img class="logo"
+                 th:src="${logoBase64 != null ? logoBase64 : '/images/logo.png'}">
+
+            <!-- CENTRO → TÍTULO Y FACTURA -->
+            <div class="header-center">
+                <h1>Venta Registrada</h1>
+                <div class="factura">Factura N° <span th:text="${venta.id}"></span></div>
+            </div>
+
+            <!-- QR -->
+            <img class="qr" th:if="${qrBase64}" th:src="${qrBase64}">
+        </div>
+
+        <!-- INFO GENERAL -->
+        <div class="info-grid">
+
+            <div class="info-box">
+                <div class="info-label">Fecha</div>
+                <div class="info-value" th:text="${#temporals.format(venta.fecha, 'dd/MM/yyyy HH:mm')}"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Cliente</div>
+                <div class="info-value" th:text="${clienteNombre}"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Empleado</div>
+                <div class="info-value" th:text="${venta.nombreEmpleado}"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Método de Pago</div>
+                <div class="info-value" th:text="${venta.metodoPago}"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Documento</div>
+                <div class="info-value" th:text="${clienteDocumento}"></div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Teléfono</div>
+                <div class="info-value" th:text="${clienteTelefono}"></div>
+            </div>
+
+        </div>
+
+        <!-- PRODUCTOS -->
+        <div class="productos">
+            <h2>Productos Vendidos</h2>
+
+            <div class="producto-item" th:each="detalle : ${venta.detalles}">
+                <div>
+                    <div class="producto-nombre"
+                         th:text="${detalle.inventario.producto.nombre}"></div>
+                    <div>
+                        <span th:text="${detalle.cantidad}"></span> x
+                        <span th:text="${#numbers.formatDecimal(detalle.inventario.producto.precio,0,'POINT',2,'COMMA')}"></span>
+                    </div>
+                </div>
+
+                <div class="producto-precio"
+                     th:text="${#numbers.formatDecimal(detalle.inventario.producto.precio.multiply(new java.math.BigDecimal(detalle.cantidad)),0,'POINT',2,'COMMA')}"></div>
+            </div>
+
+        </div>
+
+        <!-- TOTALES -->
+        <div class="totales-box">
+
+            <div class="total-line">
+                <span>Subtotal (sin IVA):</span>
+                <span th:text="${#numbers.formatDecimal(subtotal,0,'POINT',2,'COMMA')}"></span>
+            </div>
+
+            <div class="total-line">
+                <span>IVA 19%:</span>
+                <span th:text="${#numbers.formatDecimal(ivaTotal,0,'POINT',2,'COMMA')}"></span>
+            </div>
+
+            <div class="total-final">
+                <span>Total Pagado:</span>
+                <span th:text="${#numbers.formatDecimal(totalPagar,0,'POINT',2,'COMMA')}"></span>
+            </div>
+
+        </div>
+
+        <!-- BOTONES -->
+        <div class="actions">
+            <a th:href="@{'/ventas/exportar-pdf/' + ${venta.id}}" class="btn btn-pdf" target="_blank">📄 PDF</a>
+            <button onclick="window.print()" class="btn btn-print">🖨️ Imprimir</button>
+            <a th:href="@{/ventas/registrar}" class="btn btn-new">➕ Nueva Venta</a>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <title>Factura Electrónica</title>
+
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #222;
+      font-size: 13px;
+    }
+
+    .page { padding: 26px; }
+
+    h2.title {
+      text-align: center;
+      font-size: 22px;
+      color: #0b4f6c;
+      margin: 0;
+    }
+
+    .box {
+      border: 1px solid #ccc;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+    }
+
+    .box h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #0b4f6c;
+      font-weight: bold;
+    }
+
+    .field { margin: 4px 0; font-size: 12px; }
+    .label { font-weight: bold; width: 160px; display: inline-block; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 12px;
+    }
+
+    th {
+      background: #eef3f8;
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ccc;
+    }
+
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .qty { width: 40px; text-align: center; }
+    .money { width: 100px; text-align: right; }
+
+    .totals {
+      width: 280px;
+      float: right;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    .grand {
+      padding-top: 8px;
+      margin-top: 8px;
+      border-top: 2px solid #888;
+      font-size: 16px;
+      font-weight: bold;
+      color: #0b4f6c;
+    }
+
+    footer {
+      margin-top: 60px;
+      font-size: 11px;
+      text-align: center;
+      color: #666;
+      clear: both;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- CABECERA -->
+    <table style="width:100%; margin-bottom:20px;">
+      <tr>
+        <td style="width:25%; vertical-align:top;">
+          <img th:if="${logoBase64}" th:src="${logoBase64}" style="height:60px;" />
+        </td>
+
+        <td style="width:50%; text-align:center;">
+          <h2 class="title">FACTURA ELECTRÓNICA DE VENTA</h2>
+        </td>
+
+        <td style="width:25%; text-align:right; vertical-align:top;">
+          <img th:if="${qrBase64}" th:src="${qrBase64}" style="height:90px;" />
+        </td>
+      </tr>
+    </table>
+
+    <!-- DATOS DEL DOCUMENTO -->
+    <div class="box">
+      <h3>DATOS DEL DOCUMENTO</h3>
+
+      <div class="field"><span class="label">Tipo de operación:</span> Venta</div>
+      <div class="field">
+        <span class="label">Factura No.:</span>
+        <span th:text="'FV-' + ${venta.id}"></span>
+      </div>
+
+      <div class="field">
+        <span class="label">Fecha de emisión:</span>
+        <span th:text="${#temporals.format(venta.fecha,'dd/MM/yyyy HH:mm')}"></span>
+      </div>
+
+      <div class="field"><span class="label">Forma de pago:</span> <span th:text="${venta.metodoPago}"></span></div>
+      <div class="field"><span class="label">Medio de pago:</span> Contado</div>
+
+      <div class="field">
+        <span class="label">CUFE:</span>
+        <span th:text="${cufe}">CUFE-FICTICIO</span>
+      </div>
+
+      <div class="field"><span class="label">No. Resolución DIAN:</span> 18764000056789</div>
+      <div class="field"><span class="label">Vigencia:</span> 2024/01/01 - 2030/12/31</div>
+      <div class="field"><span class="label">Numeración autorizada:</span> FV-1 a FV-99999999</div>
+    </div>
+
+    <!-- DATOS DEL EMISOR -->
+    <div class="box">
+      <h3>DATOS DEL EMISOR / VENDEDOR</h3>
+
+      <div class="field"><span class="label">Razón social:</span> BJ.BYTES S.A.S.</div>
+      <div class="field"><span class="label">Nombre comercial:</span> BJ.BYTES</div>
+      <div class="field"><span class="label">NIT:</span> 901999888-1</div>
+      <div class="field"><span class="label">Tipo de contribuyente:</span> Régimen Común</div>
+      <div class="field"><span class="label">Responsabilidad fiscal:</span> Responsable de IVA</div>
+      <div class="field"><span class="label">Actividad económica:</span> 4541 – Comercio de partes de motocicletas</div>
+      <div class="field"><span class="label">País:</span> Colombia</div>
+      <div class="field"><span class="label">Departamento:</span> Bogotá D.C.</div>
+      <div class="field"><span class="label">Ciudad:</span> Bogotá</div>
+      <div class="field"><span class="label">Dirección:</span> Carrera 10 # 20-30</div>
+      <div class="field"><span class="label">Teléfono:</span> 3001234567</div>
+      <div class="field"><span class="label">Correo:</span> contacto@bjbytes.com</div>
+    </div>
+
+    <!-- DATOS CLIENTE -->
+    <div class="box">
+      <h3>DATOS DEL ADQUIRIENTE / CLIENTE</h3>
+
+      <div class="field"><span class="label">Nombre:</span> <span th:text="${clienteNombre}"></span></div>
+      <div class="field"><span class="label">Documento:</span> <span th:text="${clienteDocumento}"></span></div>
+      <div class="field"><span class="label">Teléfono:</span> <span th:text="${clienteTelefono}"></span></div>
+      <div class="field"><span class="label">Dirección:</span> <span th:text="${clienteDireccion}"></span></div>
+    </div>
+
+    <!-- DETALLE DE PRODUCTOS -->
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Descripción</th>
+          <th class="qty">Cant.</th>
+          <th class="money">Valor unit.</th>
+          <th class="money">IVA</th>
+          <th class="money">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="d : ${detallesDto}">
+          <td th:text="${d.nombre}"></td>
+          <td th:text="${d.descripcion}"></td>
+          <td class="qty" th:text="${d.cantidad}"></td>
+
+          <td class="money"
+              th:text="${#numbers.formatDecimal(d.precio,0,'POINT',2,'COMMA')}"></td>
+
+          <td class="money">
+            <span th:if="${d.exento == true}">0</span>
+            <span th:if="${d.exento == false}"
+                  th:text="${#numbers.formatDecimal(d.iva,0,'POINT',2,'COMMA')}"></span>
+          </td>
+
+          <td class="money"
+              th:text="${#numbers.formatDecimal(d.totalLinea,0,'POINT',2,'COMMA')}"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- TOTALES -->
+    <div class="totals">
+      <div class="row">
+        <div>Subtotal:</div>
+        <div th:text="${#numbers.formatDecimal(subtotal,0,'POINT',2,'COMMA')}"></div>
+      </div>
+
+      <div class="row">
+        <div>IVA 19%:</div>
+        <div th:text="${#numbers.formatDecimal(ivaTotal,0,'POINT',2,'COMMA')}"></div>
+      </div>
+
+      <div class="row grand">
+        <div>TOTAL A PAGAR:</div>
+        <div th:text="${#numbers.formatDecimal(totalPagar,0,'POINT',2,'COMMA')}"></div>
+      </div>
+    </div>
+
+    <!-- NOTAS LEGALES -->
+    <footer>
+      <p>Este documento es una representación gráfica de la factura electrónica generada.</p>
+      <p>Documento electrónico transmitido a la DIAN conforme a la Resolución 000042 de 2020.</p>
+      <p>CUFE: <span th:text="${cufe}"></span></p>
+      <p>Gracias por su compra – BJ.BYTES S.A.S.</p>
+    </footer>
+
+  </div>
+</body>
+</html>

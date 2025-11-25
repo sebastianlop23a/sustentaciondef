@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente</title>
+    <link rel="stylesheet" th:href="@{/productos.css}" />
+</head>
+<body>
+<div class="card">
+    <h1 th:text="${cliente.id} == null ? 'Nuevo Cliente' : 'Editar Cliente'"></h1>
+    <form th:action="@{/clientes/guardar}" method="post">
+        <input type="hidden" th:if="${cliente.id != null}" th:name="id" th:value="${cliente.id}" />
+        <div>
+            <label>Nombre</label>
+            <input type="text" name="nombre" th:value="${cliente.nombre}" required />
+        </div>
+        <div>
+            <label>Correo</label>
+            <input type="email" name="correo" th:value="${cliente.correo}" required />
+        </div>
+        <div>
+            <label>Teléfono</label>
+            <input 
+                type="tel" 
+                name="telefono" 
+                th:value="${cliente.telefono}"
+                pattern="[0-9]{10}"
+                maxlength="10"
+                placeholder="Ingrese 10 dígitos"
+                title="El teléfono debe tener exactamente 10 números"
+                required
+            />
+        </div>
+        <div>
+            <label>Dirección</label>
+            <input type="text" name="direccion" th:value="${cliente.direccion}" />
+        </div>
+        <div>
+            <label class="checkbox-label">
+                <input type="checkbox" name="activo" th:checked="${cliente.activo} == true" class="checkbox-input" />
+                <span class="checkbox-toggle"></span>
+                <span class="checkbox-text">Activo</span>
+            </label>
+        </div>
+        <div>
+            <button type="submit" class="btn">Guardar</button>
+            <a th:href="@{/clientes}" class="btn">Cancelar</a>
+            <a th:href="@{/home}" class="btn">Volver al Home</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

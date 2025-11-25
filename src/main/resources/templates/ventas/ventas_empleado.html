@@ -9,17 +9,17 @@
     <div class="layout">
         <div class="sidebar">
             <a th:href="@{/home}" class="button">Home</a>
-            <a th:href="@{/ventas/registrar}" class="button"> Nueva Venta</a>
-            <a th:href="@{/producto}" class="button"> Productos</a>
+            <a th:href="@{/ventas/registrar}" class="button">Nueva Venta</a>
+            <a th:href="@{/producto}" class="button">Productos</a>
             <a th:href="@{/empleado/lista}" class="button">Empleados</a>
-            <a th:href="@{/ventas/resumen}" class="button"> Resumen Ventas</a>
-            
+            <a th:href="@{/ventas/resumen}" class="button">Resumen Ventas</a>
 
-            <a th:href="@{/ventas/exportar-mis-ventas-pdf}" class="btn-pdf">📄 Descargar PDF</a>
+            <a th:href="@{/ventas/exportar-mis-ventas-pdf}" class="button">📄 Descargar PDF</a>
         </div>
 
         <div class="card">
             <h1>Mis Ventas Registradas</h1>
+
             <table>
                 <thead>
                     <tr>
@@ -30,17 +30,37 @@
                         <th>Fecha</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr th:each="venta : ${ventas}">
-                        <td th:text="${venta.id}">ID</td>
-                        <td th:text="${venta.nombreProducto}">Producto</td>
-                        <td th:text="${venta.cantidad}">Cantidad</td>
-                        <td th:text="'$' + ${#numbers.formatDecimal(venta.totalVenta, 0, 'COMMA', 0, 'POINT')}">Total</td>
-                        <td th:text="${#temporals.format(venta.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</td>
-                    </tr>
-                </tbody>
+
+<tbody>
+<tr th:each="venta : ${ventas}">
+    <td th:text="${venta.id}"></td>
+
+    <!-- Productos -->
+    <td>
+        <span th:each="detalle, iter : ${venta.detalles}">
+            <span th:text="${detalle.inventario.producto.nombre}"></span>
+            <span th:if="${!iter.last}">, </span>
+        </span>
+    </td>
+
+    <!-- Cantidades -->
+    <td>
+        <span th:each="detalle, iter : ${venta.detalles}">
+            <span th:text="${detalle.cantidad}"></span>
+            <span th:if="${!iter.last}">, </span>
+        </span>
+    </td>
+
+    <!-- Total -->
+    <td th:text="'$' + ${#numbers.formatDecimal(venta.totalVenta, 0, 'COMMA', 0, 'POINT')}"></td>
+
+    <!-- Fecha -->
+    <td th:text="${#temporals.format(venta.fecha, 'dd/MM/yyyy HH:mm')}"></td>
+</tr>
+</tbody>
             </table>
-            <a th:href="@{/empleado/home}" class="volver-home">← Volver al inicio</a>
+
+            <a th:href="@{/home}" class="volver-home">← Volver al inicio</a>
         </div>
     </div>
 </body>

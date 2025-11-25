@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Proveedores</title>
+    <link rel="stylesheet" th:href="@{/productos.css}" />
+</head>
+<body>
+<div class="card">
+    <h1>Proveedores</h1>
+    <div style="margin-bottom:16px;">
+        <a th:href="@{/proveedores/nuevo}" class="btn">Nuevo Proveedor</a>
+        <a th:href="@{/home}" class="btn" style="margin-left:8px;">Volver al Home</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${proveedores}">
+            <td th:text="${p.nombre}">Nombre</td>
+            <td th:text="${p.correo}">Correo</td>
+            <td th:text="${p.telefono}">Teléfono</td>
+            <td th:text="${p.direccion}">Dirección</td>
+            <td>
+                <span th:classappend="${p.activo} ? 'status-badge status-activo' : 'status-badge status-desactivado'"
+                      th:text="${p.activo} ? 'Sí' : 'No'">Activo</span>
+            </td>
+            <td>
+                <a th:href="@{|/proveedores/editar/${p.id}|}" class="btn" style="padding:8px 12px;">Editar</a>
+                <a th:href="@{|/proveedores/eliminar/${p.id}|}" class="btn" style="padding:8px 12px; background:#c0392b; color:#fff; margin-left:8px;"
+                   onclick="return confirm('Eliminar proveedor?')">Eliminar</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

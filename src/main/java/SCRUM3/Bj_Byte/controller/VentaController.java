@@ -1,381 +1,594 @@
 package SCRUM3.Bj_Byte.controller;
 
-import SCRUM3.Bj_Byte.model.Empleado;
-import SCRUM3.Bj_Byte.model.Inventario;
-import SCRUM3.Bj_Byte.model.Producto;
-import SCRUM3.Bj_Byte.model.Venta;
-import SCRUM3.Bj_Byte.repository.InventarioRepository;
-import SCRUM3.Bj_Byte.repository.VentaRepository;
-import SCRUM3.Bj_Byte.repository.EmpleadoRepository;
-import SCRUM3.Bj_Byte.service.PdfService;
-import SCRUM3.Bj_Byte.service.ExchangeRateService;
+import SCRUM3.Bj_Byte.model.*;
+import SCRUM3.Bj_Byte.repository.*;
+import SCRUM3.Bj_Byte.service.*;
 import SCRUM3.Bj_Byte.util.ExportarExcelVentas;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.thymeleaf.context.Context;
+import org.springframework.core.io.ClassPathResource;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.*;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+
+import java.util.Base64;
+import SCRUM3.Bj_Byte.dto.DetalleFacturaDTO;
+
 
 @Controller
 @RequestMapping("/ventas")
 public class VentaController {
 
-    @Autowired
-    private InventarioRepository inventarioRepository;
-
-    @Autowired
-    private VentaRepository ventaRepository;
-
-    @Autowired
-    private EmpleadoRepository empleadoRepository;
-
-    @Autowired
-    private PdfService pdfService;
-
-    @Autowired
-    private ExchangeRateService exchangeRateService;
+    @Autowired private InventarioRepository inventarioRepository;
+    @Autowired private VentaRepository ventaRepository;
+    @Autowired private VentaDetalleRepository ventaDetalleRepository;
+    @Autowired private EmpleadoRepository empleadoRepository;
+    @Autowired private PdfService pdfService;
+    @Autowired private ExchangeRateService exchangeRateService;
+    @Autowired private VentaService ventaService;
+    @Autowired private ClienteRepository clienteRepository;
+    @Autowired private InvoicePdfService invoicePdfService;
 
     private Empleado getEmpleadoLogueado(HttpSession session) {
         return (Empleado) session.getAttribute("empleadoLogueado");
     }
 
-    // 👉 FORMATOS
-    private static final DecimalFormat COP_FORMAT;
-    private static final DecimalFormat DECIMAL_FORMAT;
-
-    static {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("es", "CO"));
-        symbols.setGroupingSeparator('.');
-        symbols.setDecimalSeparator(',');
-
-        COP_FORMAT = new DecimalFormat("#,##0.00", symbols);
-        DECIMAL_FORMAT = new DecimalFormat("#0.00");
-    }
-
-    // ---------------------- FORMULARIOS ----------------------
-
+    /* ============================
+           FORMULARIO REGISTRAR
+       ============================ */
     @GetMapping("/registrar")
-    public String mostrarFormularioVenta(Model model) {
+    public String mostrarFormularioVenta(Model model, HttpSession session) {
+
+        if (getEmpleadoLogueado(session) == null)
+            return "redirect:/empleados/login";
+
         model.addAttribute("inventarios", inventarioRepository.findAll());
+        model.addAttribute("venta", new Venta());
+        model.addAttribute("clientes",
+                clienteRepository.findAll().stream().filter(c -> Boolean.TRUE.equals(c.getActivo())).toList());
+
         return "ventas/registrar_venta";
     }
 
+    /* ============================
+        REGISTRAR VENTA
+   ============================ */
+@PostMapping("/registrar")
+@Transactional
+public String registrarVenta(
+        @ModelAttribute Venta venta,
+        @RequestParam List<Long> inventarioId,
+        @RequestParam List<Integer> cantidad,
+        @RequestParam(required = false) Long clienteId,
+        HttpSession session,
+        RedirectAttributes ra
+) {
+    try {
+
+        Empleado empleado = getEmpleadoLogueado(session);
+        if (empleado == null)
+            return "redirect:/empleados/login";
+
+        Set<Proveedor> proveedoresAsociados = new HashSet<>();
+        BigDecimal totalVenta = BigDecimal.ZERO;
+        List<VentaDetalle> detalles = new ArrayList<>();
+
+        for (int i = 0; i < inventarioId.size(); i++) {
+
+            Long idInv = inventarioId.get(i);
+            int cant = cantidad.get(i);
+
+            Inventario inv = inventarioRepository.findById(idInv).orElseThrow();
+            Producto prod = inv.getProducto();
+
+            /* ============================
+                 VALIDACIONES
+               ============================ */
+            if (!prod.getActivo()) {
+                ra.addFlashAttribute("error", "Producto deshabilitado: " + prod.getNombre());
+                return "redirect:/ventas/registrar";
+            }
+
+            if (cant > inv.getCantidad()) {
+                ra.addFlashAttribute("error", "Stock insuficiente: " + prod.getNombre());
+                return "redirect:/ventas/registrar";
+            }
+
+            /* ============================
+               DESCONTAR INVENTARIO
+               ============================ */
+            inv.setCantidad(inv.getCantidad() - cant);
+            inventarioRepository.save(inv);
+
+            if (prod.getProveedores() != null)
+                proveedoresAsociados.addAll(prod.getProveedores());
+
+            /* ============================
+                 CALCULO DE PRECIOS
+               ============================ */
+
+            BigDecimal precioUnit = prod.getPrecio();
+            BigDecimal subtotalLinea = precioUnit.multiply(BigDecimal.valueOf(cant));
+
+            // IVA 19% SOLO si el producto NO es exento
+            BigDecimal ivaLinea = BigDecimal.ZERO;
+            if (!Boolean.TRUE.equals(prod.getExento())) {
+                ivaLinea = subtotalLinea.multiply(new BigDecimal("0.19"));
+            }
+
+            BigDecimal totalLinea = subtotalLinea.add(ivaLinea);
+
+            /* ============================
+                      DETALLE
+               ============================ */
+            VentaDetalle det = new VentaDetalle();
+            det.setInventario(inv);
+            det.setCantidad(cant);
+            det.setPrecioUnitario(precioUnit);
+            det.setSubtotal(subtotalLinea);
+            det.setIva(ivaLinea);
+            det.setTotalLinea(totalLinea);
+            det.setVenta(venta);
+
+            detalles.add(det);
+
+            /* ============================
+                  SUMAR TOTAL GENERAL
+               ============================ */
+            totalVenta = totalVenta.add(totalLinea);
+        }
+
+        /* ============================
+               DATOS GENERALES VENTA
+           ============================ */
+        venta.setEmpleado(empleado);
+        venta.setNombreEmpleado(empleado.getNombre());
+        venta.setFecha(LocalDateTime.now());
+        venta.setTotalVenta(totalVenta);
+        venta.setProveedores(proveedoresAsociados);
+
+        if (clienteId != null && clienteId > 0) {
+            clienteRepository.findById(clienteId)
+                    .ifPresent(c -> venta.setCliente(c.getNombre()));
+        }
+
+        venta.setDetalles(detalles);
+
+        /* ============================
+                GUARDAR VENTA
+           ============================ */
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        for (VentaDetalle d : detalles) {
+            d.setVenta(ventaGuardada);
+            ventaDetalleRepository.save(d);
+        }
+
+        ra.addFlashAttribute("mensaje", "Venta registrada correctamente");
+
+        return "redirect:/ventas/resumen/" + ventaGuardada.getId();
+
+    } catch (Exception e) {
+        ra.addFlashAttribute("error", "Error: " + e.getMessage());
+        return "redirect:/ventas/registrar";
+    }
+}
+
+
+    /* ============================
+           EDITAR VENTA
+       ============================ */
     @GetMapping("/editar/{id}")
-    public String mostrarFormularioEditar(@PathVariable Long id, HttpSession session, Model model) {
-        if (getEmpleadoLogueado(session) == null) return "redirect:/empleados/login";
+    public String editar(@PathVariable Long id, HttpSession session, Model model) {
 
-        Optional<Venta> ventaOpt = ventaRepository.findById(id);
-        if (ventaOpt.isEmpty()) return "redirect:/ventas/lista";
+        if (getEmpleadoLogueado(session) == null)
+            return "redirect:/empleados/login";
 
-        model.addAttribute("venta", ventaOpt.get());
+        Venta venta = ventaRepository.findById(id).orElse(null);
+        if (venta == null) return "redirect:/ventas/lista";
+
+        model.addAttribute("venta", venta);
+        model.addAttribute("detalles", ventaDetalleRepository.findByVentaId(id));
         model.addAttribute("inventarios", inventarioRepository.findAll());
+
         return "ventas/editar_venta";
     }
 
-    // ---------------------- REGISTRAR VENTA ----------------------
-
-    @PostMapping("/registrar")
-    public String procesarVenta(@RequestParam Long inventarioId,
-                                @RequestParam int cantidad,
-                                @RequestParam String cliente,
-                                @RequestParam String metodoPago,
-                                @RequestParam(required = false)
-                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaVenta,
-                                HttpSession session,
-                                Model model) {
-
-        Empleado empleado = getEmpleadoLogueado(session);
-        if (empleado == null) return "redirect:/empleados/login";
-
-        Optional<Inventario> optInventario = inventarioRepository.findById(inventarioId);
-        if (optInventario.isEmpty() || cantidad <= 0) {
-            model.addAttribute("error", "Inventario no válido o cantidad incorrecta.");
-            model.addAttribute("inventarios", inventarioRepository.findAll());
-            return "ventas/registrar_venta";
-        }
-
-        Inventario inventario = optInventario.get();
-
-        if (inventario.getCantidad() < cantidad) {
-            model.addAttribute("error", "No hay suficiente stock en inventario.");
-            model.addAttribute("inventarios", inventarioRepository.findAll());
-            return "ventas/registrar_venta";
-        }
-
-        Producto producto = inventario.getProducto();
-        if (producto == null) {
-            model.addAttribute("error", "El inventario seleccionado no tiene producto asociado.");
-            model.addAttribute("inventarios", inventarioRepository.findAll());
-            return "ventas/registrar_venta";
-        }
-
-        // Actualizar inventario
-        inventario.setCantidad(inventario.getCantidad() - cantidad);
-        inventarioRepository.save(inventario);
-
-        BigDecimal total = producto.getPrecio().multiply(BigDecimal.valueOf(cantidad));
-
-        // Crear venta
-        Venta venta = new Venta();
-        venta.setInventario(inventario);
-        venta.setEmpleado(empleado);
-        venta.setCantidad(cantidad);
-        venta.setFecha(fechaVenta != null ? fechaVenta : LocalDateTime.now());
-        venta.setNombreProducto(producto.getNombre());
-        venta.setNombreEmpleado(empleado.getNombre());
-        venta.setTotalVenta(total);
-        venta.setCliente(cliente);
-        venta.setMetodoPago(metodoPago);
-
-        ventaRepository.save(venta);
-        return "redirect:/ventas/mis-ventas";
-    }
-
-    // ---------------------- EDITAR VENTA ----------------------
-
-    @PostMapping("/editar/{id}")
-    public String procesarEdicionVenta(@PathVariable Long id,
-                                       @RequestParam Long inventarioId,
-                                       @RequestParam int cantidad,
-                                       @RequestParam String cliente,
-                                       @RequestParam String metodoPago,
-                                       HttpSession session,
-                                       Model model) {
-        if (getEmpleadoLogueado(session) == null) return "redirect:/empleados/login";
-
-        Optional<Venta> ventaOpt = ventaRepository.findById(id);
-        Optional<Inventario> inventarioOpt = inventarioRepository.findById(inventarioId);
-
-        if (ventaOpt.isEmpty() || inventarioOpt.isEmpty() || cantidad <= 0) {
-            return "redirect:/ventas/lista";
-        }
-
-        Venta venta = ventaOpt.get();
-        Inventario nuevoInventario = inventarioOpt.get();
-        Inventario inventarioAnterior = venta.getInventario();
-
-        // Devolver stock del inventario anterior
-        if (inventarioAnterior != null) {
-            inventarioAnterior.setCantidad(inventarioAnterior.getCantidad() + venta.getCantidad());
-            inventarioRepository.save(inventarioAnterior);
-        }
-
-        if (nuevoInventario.getCantidad() < cantidad) {
-            model.addAttribute("error", "No hay suficiente stock en inventario.");
-            model.addAttribute("venta", venta);
-            model.addAttribute("inventarios", inventarioRepository.findAll());
-            return "ventas/editar_venta";
-        }
-
-        Producto producto = nuevoInventario.getProducto();
-        if (producto == null) {
-            model.addAttribute("error", "El inventario seleccionado no tiene producto asociado.");
-            model.addAttribute("venta", venta);
-            model.addAttribute("inventarios", inventarioRepository.findAll());
-            return "ventas/editar_venta";
-        }
-
-        nuevoInventario.setCantidad(nuevoInventario.getCantidad() - cantidad);
-        inventarioRepository.save(nuevoInventario);
-
-        venta.setInventario(nuevoInventario);
-        venta.setCantidad(cantidad);
-        venta.setNombreProducto(producto.getNombre());
-        venta.setTotalVenta(producto.getPrecio().multiply(BigDecimal.valueOf(cantidad)));
-        venta.setCliente(cliente);
-        venta.setMetodoPago(metodoPago);
-
-        ventaRepository.save(venta);
-        return "redirect:/ventas/lista";
-    }
-
-    // ---------------------- ELIMINAR VENTA ----------------------
-
+    /* ============================
+           ELIMINAR VENTA
+       ============================ */
     @GetMapping("/eliminar/{id}")
-    public String eliminarVenta(@PathVariable Long id, HttpSession session) {
-        if (getEmpleadoLogueado(session) == null) return "redirect:/empleados/login";
+    @Transactional
+    public String eliminar(@PathVariable Long id, HttpSession session) {
 
-        Optional<Venta> ventaOpt = ventaRepository.findById(id);
-        if (ventaOpt.isPresent()) {
-            Venta venta = ventaOpt.get();
-            Inventario inventario = venta.getInventario();
-            if (inventario != null) {
-                inventario.setCantidad(inventario.getCantidad() + venta.getCantidad());
-                inventarioRepository.save(inventario);
+        if (getEmpleadoLogueado(session) == null)
+            return "redirect:/empleados/login";
+
+        Venta venta = ventaRepository.findById(id).orElse(null);
+        if (venta != null) {
+
+            List<VentaDetalle> detalles = ventaDetalleRepository.findByVentaId(id);
+
+            for (VentaDetalle d : detalles) {
+                Inventario inv = d.getInventario();
+                inv.setCantidad(inv.getCantidad() + d.getCantidad());
+                inventarioRepository.save(inv);
             }
-            ventaRepository.deleteById(id);
+
+            ventaDetalleRepository.deleteAll(detalles);
+            ventaRepository.delete(venta);
         }
+
         return "redirect:/ventas/lista";
     }
 
-    // ---------------------- LISTADOS ----------------------
-
+    /* ============================
+           LISTAR VENTAS
+       ============================ */
     @GetMapping("/lista")
-    public String listarVentas(HttpSession session, Model model) {
-        Empleado empleado = getEmpleadoLogueado(session);
-        if (empleado == null) return "redirect:/empleados/login";
+    public String lista(HttpSession session, Model model) {
+        Empleado emp = getEmpleadoLogueado(session);
+        if (emp == null) return "redirect:/empleados/login";
 
-        if (empleado.getRolId() == null || empleado.getRolId().intValue() != 1) {
+        if (emp.getRolId() != 1)
             return "redirect:/ventas/mis-ventas";
-        }
 
-        List<Venta> ventas = ventaRepository.findAll();
-
-        model.addAttribute("ventas", ventas);
-        model.addAttribute("productos", ventas.stream()
-                .map(v -> v.getInventario() != null && v.getInventario().getProducto() != null ? v.getInventario().getProducto().getNombre() : "N/A")
-                .distinct().collect(Collectors.toList()));
-        model.addAttribute("empleados", ventas.stream()
-                .map(v -> v.getEmpleado() != null ? v.getEmpleado().getNombre() : "N/A")
-                .distinct().collect(Collectors.toList()));
-        model.addAttribute("fechas", ventas.stream()
-                .map(v -> v.getFecha() != null ? v.getFecha().toLocalDate().toString() : "N/A")
-                .distinct().collect(Collectors.toList()));
-
+        model.addAttribute("ventas", ventaRepository.findAll());
         return "ventas/listar_ventas";
     }
 
+    /* ============================
+           MIS VENTAS
+       ============================ */
     @GetMapping("/mis-ventas")
     public String misVentas(HttpSession session, Model model) {
-        Empleado empleado = getEmpleadoLogueado(session);
-        if (empleado == null) return "redirect:/empleados/login";
 
-        List<Venta> ventasEmpleado = ventaRepository.findByEmpleadoId(empleado.getId());
-        model.addAttribute("ventas", ventasEmpleado);
+        Empleado emp = getEmpleadoLogueado(session);
+        if (emp == null) return "redirect:/empleados/login";
+
+        model.addAttribute("ventas", ventaRepository.findByEmpleadoId(emp.getId()));
         return "ventas/ventas_empleado";
     }
 
-    // ---------------------- RESUMEN VENTAS ----------------------
-
+    /* ============================
+           RESUMEN EMPLEADO
+       ============================ */
     @GetMapping("/resumen")
-    public String resumenVentas(HttpSession session, Model model) {
-        Empleado empleado = getEmpleadoLogueado(session);
-        if (empleado == null) return "redirect:/empleados/login";
+    public String resumen(HttpSession session, Model model) {
 
-        Long empleadoId = empleado.getId();
+        Empleado emp = getEmpleadoLogueado(session);
+        if (emp == null) return "redirect:/empleados/login";
 
-        BigDecimal totalHistorico = Optional.ofNullable(ventaRepository.obtenerTotalVendidoPorEmpleado(empleadoId))
-                .orElse(BigDecimal.ZERO);
+        Long id = emp.getId();
 
-        BigDecimal totalHoy = Optional.ofNullable(
-                ventaRepository.obtenerTotalVendidoPorEmpleadoEntreFechas(
-                        empleadoId, LocalDate.now().atStartOfDay(), LocalDateTime.now()
-                )).orElse(BigDecimal.ZERO);
+        BigDecimal totalHist = ventaRepository.obtenerTotalVendidoPorEmpleado(id);
+        BigDecimal totalHoy = ventaRepository.obtenerTotalVendidoPorEmpleadoEntreFechas(
+                id, LocalDate.now().atStartOfDay(), LocalDateTime.now());
 
-        // Conversiones
-        BigDecimal totalHoyUSD = exchangeRateService.convertFromCOP(totalHoy, "USD");
-        BigDecimal totalHoyEUR = exchangeRateService.convertFromCOP(totalHoy, "EUR");
-        BigDecimal totalHistoricoUSD = exchangeRateService.convertFromCOP(totalHistorico, "USD");
-        BigDecimal totalHistoricoEUR = exchangeRateService.convertFromCOP(totalHistorico, "EUR");
-
-        // Ventas por día de la semana
-        LocalDate today = LocalDate.now();
-        LocalDate monday = today.with(java.time.DayOfWeek.MONDAY);
-        BigDecimal[] ventasPorDia = new BigDecimal[7];
-        for (int i = 0; i < 7; i++) {
-            LocalDate dia = monday.plusDays(i);
-            BigDecimal totalDia = ventaRepository.obtenerTotalVendidoPorEmpleadoEntreFechas(
-                    empleadoId,
-                    dia.atStartOfDay(),
-                    dia.atTime(23, 59, 59)
-            );
-            ventasPorDia[i] = Optional.ofNullable(totalDia).orElse(BigDecimal.ZERO);
-        }
-
-        model.addAttribute("ventasPorDia", ventasPorDia);
-
-        // Totales
-        model.addAttribute("empleado", empleado);
-        model.addAttribute("totalHistorico", totalHistorico);
-        model.addAttribute("totalHoy", totalHoy);
-        model.addAttribute("totalHoyUSD", totalHoyUSD);
-        model.addAttribute("totalHoyEUR", totalHoyEUR);
-        model.addAttribute("totalHistoricoUSD", totalHistoricoUSD);
-        model.addAttribute("totalHistoricoEUR", totalHistoricoEUR);
-
-        // Última actualización de la API
-        model.addAttribute("ultimaActualizacion", exchangeRateService.getUltimaActualizacion());
+        model.addAttribute("empleado", emp);
+        model.addAttribute("totalHistorico", totalHist != null ? totalHist : BigDecimal.ZERO);
+        model.addAttribute("totalHoy", totalHoy != null ? totalHoy : BigDecimal.ZERO);
 
         return "ventas/resumen_ventas";
     }
 
-    // ---------------------- EXPORTACIONES ----------------------
-
+    /* ============================
+           EXPORTAR EXCEL
+       ============================ */
     @GetMapping("/exportar")
-    public void exportarVentas(HttpServletResponse response) throws IOException {
-        try {
-            List<Venta> listaVentas = ventaRepository.findAll();
-            if (listaVentas.isEmpty()) {
-                response.setContentType("text/plain");
-                response.getWriter().write("No hay ventas para exportar.");
-                return;
-            }
+    public void exportar(HttpServletResponse response, HttpSession session) throws IOException {
 
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader("Content-Disposition", "attachment; filename=ventas.xlsx");
-
-            ExportarExcelVentas exportador = new ExportarExcelVentas(listaVentas);
-            exportador.exportar(response);
-        } catch (Exception e) {
-            response.reset();
-            response.setContentType("text/plain");
-            response.getWriter().write("Error al exportar: " + e.getMessage());
-            e.printStackTrace();
+        Empleado emp = getEmpleadoLogueado(session);
+        if (emp == null || emp.getRolId() != 1) {
+            response.getWriter().write("No autorizado.");
+            return;
         }
+
+        List<Venta> ventas = ventaRepository.findAll();
+
+        if (ventas.isEmpty()) {
+            response.getWriter().write("No hay ventas.");
+            return;
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=ventas.xlsx");
+
+        new ExportarExcelVentas(ventas).exportar(response);
     }
 
-    @GetMapping("/exportar-pdf")
-    public void exportarVentasPDF(HttpServletResponse response, HttpSession session) throws IOException {
-        try {
-            Empleado empleado = getEmpleadoLogueado(session);
-            if (empleado == null || empleado.getRolId() == null || empleado.getRolId() != 1) {
-                response.setContentType("text/plain");
-                response.getWriter().write("Solo los administradores pueden exportar todas las ventas.");
-                return;
-            }
-            pdfService.exportarVentasPDF(response);
-        } catch (Exception e) {
-            response.reset();
-            response.setContentType("text/plain");
-            response.getWriter().write("Error al exportar PDF: " + e.getMessage());
-            e.printStackTrace();
-        }
+   /* ============================
+       EXPORTAR PDF FACTURA
+   ============================ */
+@GetMapping("/exportar-pdf/{id}")
+public void exportarPdf(@PathVariable Long id,
+                        HttpServletRequest request,
+                        HttpServletResponse response) throws Exception {
+
+    Optional<Venta> opt = ventaRepository.findById(id);
+    if (opt.isEmpty()) {
+        response.sendError(404, "Venta no encontrada");
+        return;
     }
 
-    @GetMapping("/exportar-pdf/{id}")
-    public void exportarVentaPDF(@PathVariable Long id, HttpServletResponse response) throws IOException {
+    Venta venta = opt.get();
+
+    try {
+        /* ============================
+             BASE URL PARA IMÁGENES
+           ============================ */
+        String baseUrl = request.getScheme() + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443
+                ? "" : ":" + request.getServerPort())
+                + request.getContextPath();
+
+        Context ctx = new Context();
+        ctx.setVariable("venta", venta);
+        ctx.setVariable("baseUrl", baseUrl);
+
+        /* ============================
+                 DATOS DE EMPRESA
+           ============================ */
+        ctx.setVariable("empresaNombre", "BJ.BYTES");
+        ctx.setVariable("empresaDireccion", "Calle 123 - Bogotá");
+        ctx.setVariable("empresaTelefono", "+57 300 000 0000");
+        ctx.setVariable("empresaNIT", "NIT 123456789-0");
+
+        /* ============================
+              DATOS DEL CLIENTE
+           ============================ */
+        ctx.setVariable("clienteNombre", 
+                venta.getCliente() != null ? venta.getCliente() : "Cliente Final");
+
+        ctx.setVariable("clienteDocumento",
+                venta.getClienteDocumento() != null ? venta.getClienteDocumento() : "");
+
+        ctx.setVariable("clienteTelefono",
+                venta.getClienteTelefono() != null ? venta.getClienteTelefono() : "");
+
+        ctx.setVariable("clienteDireccion",
+                venta.getClienteDireccion() != null ? venta.getClienteDireccion() : "");
+
+        /* ============================
+             ARMAR DETALLES DTO
+           ============================ */
+        List<DetalleFacturaDTO> detallesDto = new ArrayList<>();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal ivaTotal = BigDecimal.ZERO;
+
+        for (VentaDetalle d : venta.getDetalles()) {
+
+            Producto prod = d.getInventario().getProducto();
+            boolean exento = prod.getExento() != null && prod.getExento();
+
+            DetalleFacturaDTO dto = new DetalleFacturaDTO();
+            dto.setNombre(prod.getNombre());
+            dto.setDescripcion(prod.getDescripcion() != null ? prod.getDescripcion() : "Producto vendido");
+            dto.setCantidad(d.getCantidad());
+            dto.setPrecio(prod.getPrecio());
+            dto.setExento(exento);
+
+            BigDecimal precio = prod.getPrecio();
+            BigDecimal lineaSubtotal = precio.multiply(BigDecimal.valueOf(d.getCantidad()));
+
+            BigDecimal iva = exento ? BigDecimal.ZERO : lineaSubtotal.multiply(new BigDecimal("0.19"));
+            BigDecimal totalLinea = lineaSubtotal.add(iva);
+
+            dto.setIva(iva);
+            dto.setTotalLinea(totalLinea);
+
+            subtotal = subtotal.add(lineaSubtotal);
+            ivaTotal = ivaTotal.add(iva);
+
+            detallesDto.add(dto);
+        }
+
+        ctx.setVariable("detallesDto", detallesDto);
+        ctx.setVariable("subtotal", subtotal);
+        ctx.setVariable("ivaTotal", ivaTotal);
+        ctx.setVariable("totalPagar", subtotal.add(ivaTotal));
+
+        /* ============================
+               CARGAR LOGO BASE64
+           ============================ */
+        String[] rutas = {
+                "static/images/logo.png",
+                "static/images/logo.jpg",
+                "images/logo.png",
+                "images/logo.jpg",
+                "logo.png",
+                "logo.jpg"
+        };
+
+        for (String ruta : rutas) {
+            try {
+                ClassPathResource res = new ClassPathResource(ruta);
+                if (res.exists()) {
+                    byte[] bytes = res.getInputStream().readAllBytes();
+                    String mime = ruta.endsWith(".png") ? "image/png" : "image/jpeg";
+
+                    ctx.setVariable("logoBase64",
+                            "data:" + mime + ";base64," +
+                                    Base64.getEncoder().encodeToString(bytes));
+                    break;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        /* ============================
+                GENERAR QR
+           ============================ */
         try {
-            pdfService.exportarVentaPDF(id, response);
+            String codigo = "Factura:" + venta.getId()
+                    + "|Fecha:" + venta.getFecha()
+                    + "|Total:" + venta.getTotalVenta();
+
+            QRCodeWriter qr = new QRCodeWriter();
+            BitMatrix matrix = qr.encode(codigo, BarcodeFormat.QR_CODE, 150, 150);
+
+            ByteArrayOutputStream outQR = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(matrix, "PNG", outQR);
+
+            ctx.setVariable("qrBase64",
+                    "data:image/png;base64," +
+                            Base64.getEncoder().encodeToString(outQR.toByteArray()));
+
         } catch (Exception e) {
+            System.out.println("Error QR: " + e.getMessage());
+        }
+
+        /* ============================
+               EXPORTAR PDF
+           ============================ */
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=factura_" + venta.getId() + ".pdf");
+
+        invoicePdfService.generatePdf(
+                "invoice",
+                ctx,
+                baseUrl,
+                response.getOutputStream()
+        );
+
+    } catch (Exception e) {
+
+        if (!response.isCommitted()) {
             response.reset();
-            response.setContentType("text/plain");
-            response.getWriter().write("Error al exportar PDF: " + e.getMessage());
-            e.printStackTrace();
+            response.setContentType("text/plain;charset=UTF-8");
+            response.getWriter().write("Error PDF: " + e.getMessage());
         }
     }
+}
 
+
+    /* ============================
+       EXPORTAR MIS VENTAS PDF
+       ============================ */
     @GetMapping("/exportar-mis-ventas-pdf")
-    public void exportarMisVentasPDF(HttpServletResponse response, HttpSession session) throws IOException {
+    public void exportarMisVentasPDF(HttpServletResponse response,
+                                     HttpSession session) throws IOException {
+
+        Empleado empleado = getEmpleadoLogueado(session);
+        if (empleado == null) {
+            response.getWriter().write("Debe iniciar sesión.");
+            return;
+        }
+
         try {
             pdfService.exportarMisVentasPDF(response, session);
         } catch (Exception e) {
-            response.reset();
-            response.setContentType("text/plain");
-            response.getWriter().write("Error al exportar PDF: " + e.getMessage());
-            e.printStackTrace();
+            response.getWriter().write("Error: " + e.getMessage());
         }
     }
+
+    /* ============================
+       RESUMEN INDIVIDUAL
+       ============================ */
+    @GetMapping("/resumen/{id}")
+public String resumenVenta(
+        @PathVariable Long id,
+        Model model,
+        RedirectAttributes ra) {
+
+    Optional<Venta> opt = ventaRepository.findById(id);
+
+    if (opt.isEmpty()) {
+        ra.addFlashAttribute("error", "Venta no encontrada");
+        return "redirect:/ventas/registrar";
+    }
+
+    Venta venta = opt.get();
+    model.addAttribute("venta", venta);
+
+    // ====== DATOS EMPRESA =======
+    model.addAttribute("empresaNombre", "BJ.BYTES");
+    model.addAttribute("empresaDireccion", "Calle 123 - Bogotá");
+    model.addAttribute("empresaTelefono", "+57 300 000 0000");
+    model.addAttribute("empresaNIT", "NIT 123456789-0");
+
+    // ====== DATOS CLIENTE =======
+    model.addAttribute("clienteNombre",
+            venta.getCliente() != null ? venta.getCliente() : "Cliente Final");
+
+    model.addAttribute("clienteDocumento",
+            venta.getClienteDocumento() != null ? venta.getClienteDocumento() : "");
+
+    model.addAttribute("clienteTelefono",
+            venta.getClienteTelefono() != null ? venta.getClienteTelefono() : "");
+
+    model.addAttribute("clienteDireccion",
+            venta.getClienteDireccion() != null ? venta.getClienteDireccion() : "");
+
+    // ====== LOGO BASE64 =======
+    try {
+        String[] rutas = {
+                "static/images/logo.png",
+                "static/images/logo.jpg",
+                "images/logo.png",
+                "images/logo.jpg",
+                "logo.png",
+                "logo.jpg"
+        };
+
+        for (String ruta : rutas) {
+            ClassPathResource res = new ClassPathResource(ruta);
+            if (res.exists()) {
+                byte[] bytes = res.getInputStream().readAllBytes();
+                String mime = ruta.endsWith(".png") ? "image/png" : "image/jpeg";
+
+                model.addAttribute("logoBase64",
+                        "data:" + mime + ";base64," +
+                                Base64.getEncoder().encodeToString(bytes));
+                break;
+            }
+        }
+
+    } catch (Exception ignored) {}
+
+    // ====== QR BASE64 =======
+    try {
+        QRCodeWriter qr = new QRCodeWriter();
+        BitMatrix matrix = qr.encode(
+                "Factura: " + venta.getId() +
+                        "|Fecha: " + venta.getFecha() +
+                        "|Total: " + venta.getTotalVenta(),
+                BarcodeFormat.QR_CODE,
+                150, 150);
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(matrix, "PNG", output);
+
+        model.addAttribute("qrBase64",
+                "data:image/png;base64," +
+                        Base64.getEncoder().encodeToString(output.toByteArray()));
+
+    } catch (Exception ignored) {}
+
+    return "ventas/resumen_venta";
+}
+
+
 }

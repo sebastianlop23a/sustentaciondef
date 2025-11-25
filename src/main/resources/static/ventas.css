@@ -220,3 +220,110 @@ table tbody tr:hover {
     gap: 15px;
     margin-bottom: 20px;
 }
+
+/* ===========================================
+   OPTIMIZACIÓN PARA IMPRESORAS POS (TÉRMICAS)
+   ========================================== */
+@media print {
+
+    /* Eliminar fondos */
+    body, .modal-overlay {
+        background: white !important;
+    }
+
+    /* Quitar sombras y bordes */
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Ocultar botones y acciones */
+    .modal-footer {
+        display: none !important;
+    }
+
+    /* Ajuste tipo recibo POS (58mm o 80mm) */
+    @page {
+        size: 80mm auto;   /* Cambiar a 58mm si tu impresora es más pequeña */
+        margin: 3mm;
+    }
+
+    /* Reducir padding */
+    .modal-body {
+        padding: 0 !important;
+    }
+
+    .venta-info {
+        grid-template-columns: 1fr !important;
+        padding: 0;
+        background: white !important;
+    }
+
+    .info-item {
+        padding: 4px 0;
+        border-bottom: 1px dashed #999;
+    }
+
+    .detalles-venta h3 {
+        margin: 8px 0;
+        font-size: 13px;
+    }
+
+    .detalle-item {
+        font-size: 12px !important;
+        padding: 6px 0 !important;
+        margin: 0 !important;
+        border-bottom: 1px dashed #ccc;
+    }
+
+    .detalle-producto-nombre {
+        font-size: 12px !important;
+    }
+
+    .detalle-precio {
+        font-size: 12px !important;
+        padding-left: 5px;
+    }
+
+    .resumen-totales {
+        padding: 8px 0 !important;
+        background: white !important;
+        border: none !important;
+    }
+
+    .total-line {
+        font-size: 13px !important;
+        margin: 4px 0 !important;
+    }
+
+    .total-line.total-final {
+        font-size: 16px !important;
+        padding-top: 6px !important;
+    }
+
+    /* Quitar iconos muy grandes */
+    .success-icon {
+        display: none !important;
+    }
+
+    /* Encabezado limpio tipo recibo */
+    .modal-header {
+        background: white !important;
+        color: black !important;
+        border-bottom: 1px solid black !important;
+        padding: 6px 0 !important;
+    }
+
+    .modal-header h2 {
+        font-size: 16px !important;
+        margin: 0;
+    }
+
+    .modal-header p {
+        font-size: 12px !important;
+        margin: 0;
+    }
+}

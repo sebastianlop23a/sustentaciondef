@@ -20,24 +20,24 @@
 
         <!-- Totales en COP -->
         <p>Total vendido hoy: 
-            <span th:text="${#numbers.formatDecimal(totalHoy, 0, 'COMMA', 2, 'POINT')}"></span> COP
+            <span th:text="${#numbers.formatDecimal(totalHoy, 0, 'POINT', 0, 'POINT')}"></span> COP
         </p>
         <p>Total vendido históricamente: 
-            <span th:text="${#numbers.formatDecimal(totalHistorico, 0, 'COMMA', 2, 'POINT')}"></span> COP
+            <span th:text="${#numbers.formatDecimal(totalHistorico, 0, 'POINT', 0, 'POINT')}"></span> COP
         </p>
 
         <!-- Totales en USD y EUR -->
         <p>Equivalente en USD (Hoy): 
-            $ <span th:text="${#numbers.formatDecimal(totalHoyUSD, 1, 'POINT', 2, 'POINT')}"></span>
+            $ <span th:text="${#numbers.formatDecimal(totalHoyUSD, 2, 'POINT', 2, 'POINT')}"></span>
         </p>
         <p>Equivalente en EUR (Hoy): 
-            € <span th:text="${#numbers.formatDecimal(totalHoyEUR, 1, 'POINT', 2, 'POINT')}"></span>
+            € <span th:text="${#numbers.formatDecimal(totalHoyEUR, 2, 'POINT', 2, 'POINT')}"></span>
         </p>
         <p>Equivalente en USD (Histórico): 
-            $ <span th:text="${#numbers.formatDecimal(totalHistoricoUSD, 1, 'POINT', 2, 'POINT')}"></span>
+            $ <span th:text="${#numbers.formatDecimal(totalHistoricoUSD, 2, 'POINT', 2, 'POINT')}"></span>
         </p>
         <p>Equivalente en EUR (Histórico): 
-            € <span th:text="${#numbers.formatDecimal(totalHistoricoEUR, 1, 'POINT', 2, 'POINT')}"></span>
+            € <span th:text="${#numbers.formatDecimal(totalHistoricoEUR, 2, 'POINT', 2, 'POINT')}"></span>
         </p>
 
         <hr>
@@ -63,7 +63,7 @@
 
 <script th:inline="javascript">
 /*<![CDATA[*/
-    // Totales y ventas por día desde Thymeleaf
+    // Asegúrate que estas variables son números en el controlador
     const totalHoy = /*[[${totalHoy}]]*/ 0;
     const totalHistorico = /*[[${totalHistorico}]]*/ 0;
     const ventasPorDia = /*[[${ventasPorDia}]]*/ [0,0,0,0,0,0,0];
@@ -75,7 +75,7 @@
         data: {
             labels: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
             datasets: [{
-                label: 'Ventas en pesos colombianos',
+                label: 'Ventas en COP',
                 data: ventasPorDia,
                 backgroundColor: '#4CAF50'
             }]

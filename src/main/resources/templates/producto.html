@@ -3,50 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <title>Productos</title>
-    <link rel="stylesheet" th:href="@{/productos.css}">    
+    <link rel="stylesheet" th:href="@{/productos.css}">
+    
+    <style>
+        /* Estilo suave para productos desactivados */
+        .desactivado {
+            background-color: rgba(183,75,75,0.06);
+            color: #b74b4b;
+        }
+
+        .row-actions a, .row-actions form {
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* Buscador */
+        #buscador {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-red {
+            padding: 8px 14px;
+            background: #c0392b;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+    </style>
 </head>
+
 <body>
-    <div class="card">
-        <h1>Lista de Productos</h1>
+<div class="card">
 
-        <!-- Formulario de búsqueda (todos pueden usarlo) -->
-        <form th:action="@{/producto}" method="get">
-            <input type="text" name="filtro" th:value="${filtro}" placeholder="Buscar por nombre..." />
-            <button type="submit">Buscar</button>
-            <a th:href="@{/producto}" class="limpiar">Limpiar</a>
-            <a th:href="@{/home}" class="btn-home">Volver al Home</a>
-        </form>
+    <h1>Lista de Productos</h1>
 
-        <!-- Formulario para cargar CSV (SOLO ADMIN) -->
-        <form th:if="${session.empleadoLogueado.rolId == 1}" 
-              th:action="@{/producto/cargar-csv}" 
-              method="post" 
-              enctype="multipart/form-data">
-            <input type="file" name="archivo" accept=".csv" required>
-            <button type="submit">Cargar productos desde CSV</button>
-        </form>
-
-        <!-- Tabla de productos (todos la ven) -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th>Precio</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="producto : ${productos}">
-                    <td th:text="${producto.id}"></td>
-                    <td th:text="${producto.nombre}"></td>
-                    <td th:text="${producto.descripcion}"></td>
-                    <td th:text="${#numbers.formatDecimal(producto.precio, 1, 'POINT', 2, 'COMMA')}"></td>
-                </tr>
-            </tbody>
-        </table>
-
-        
+    <!-- ================================
+            BOTONES SUPERIORES
+    ==================================== -->
+    <div class="header-actions">
+        <a th:href="@{/producto/nuevo}" class="btn">➕ Agregar Producto</a>
+        <a th:href="@{/home}" class="btn">🏠 Volver al Home</a>
     </div>
+
+    <!-- ================================
+             BUSCADOR JS
+    ==================================== -->
+    <input type="text" id="buscador" placeholder="Buscar producto...">
+
+    <!-- ================================
+            CARGAR CSV (solo admin)
+    ==================================== -->
+    <form th:if="${session.empleadoLogueado.rolId == 1}" 
+          th:action="@{/producto/cargar-csv}" 
+          method="post" enctype="multipart/form-data">
+        <input type="file" name="archivo" accept=".csv" required>
+        <button type="submit">Cargar productos desde CSV</button>
+    </form>
+
+    <!-- ================================
+            TABLA DE PRODUCTOS
+    ==================================== -->
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Proveedores</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+        </tr>
+        </thead>
+
+        <tbody id="tablaProductos">
+
+        <tr th:each="producto : ${productos}"
+            th:attr="data-nombre=${producto.nombre}"
+            th:classappend="${producto.activo} ? '' : 'desactivado'">
+
+            <td th:text="${producto.id}"></td>
+
+            <td th:text="${producto.nombre}"></td>
+
+            <!-- Proveedores -->
+            <td>
+                <span th:if="${#lists.isEmpty(producto.proveedores)}">—</span>
+                <span th:each="prov, i : ${producto.proveedores}">
+                    <span th:text="${prov.nombre}"></span><span th:if="${!i.last}">, </span>
+                </span>
+            </td>
+
+            <td th:text="${producto.activo ? 'Activo' : 'Deshabilitado'}"></td>
+
+            <!-- ACCIONES -->
+            <td class="row-actions">
+                <a th:href="@{|/producto/editar/${producto.id}|}" class="btn">Editar</a>
+
+                <a th:href="@{|/producto/eliminar/${producto.id}|}"
+                   class="btn-red"
+                   onclick="return confirm('¿Eliminar producto?');">
+                    Eliminar
+                </a>
+            </td>
+
+            <td th:text="${producto.descripcion}"></td>
+
+            <td th:text="${#numbers.formatDecimal(producto.precio, 1, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+
+        </tbody>
+    </table>
+
+</div>
+
+
+<!-- ==================================
+        JAVASCRIPT DEL BUSCADOR
+===================================== -->
+<script>
+    const buscador = document.getElementById("buscador");
+    const filas = document.querySelectorAll("#tablaProductos tr");
+
+    buscador.addEventListener("input", function () {
+        const texto = this.value.toLowerCase();
+
+        filas.forEach(fila => {
+            let nombre = fila.getAttribute("data-nombre").toLowerCase();
+            fila.style.display = nombre.includes(texto) ? "" : "none";
+        });
+    });
+</script>
+
 </body>
 </html>

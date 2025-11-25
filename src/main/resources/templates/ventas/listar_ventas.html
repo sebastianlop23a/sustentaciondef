@@ -6,110 +6,138 @@
     <link rel="stylesheet" th:href="@{/ventas.css}">
 </head>
 <body>
-    <div class="layout">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <a th:href="@{/home}" class="button">Inicio</a>
-            <a th:href="@{/ventas/registrar}" class="button">Registrar Venta</a>
-            <a th:href="@{/producto}" class="button">Productos</a>
-            <a th:href="@{/empleado/lista}" class="button">Empleados</a>
-        </div>
-
-        <!-- Contenedor principal -->
-        <div class="card" style="flex:1; padding:20px;">
-            <h2>Lista de Ventas Realizadas</h2>
-
-            <!-- Botones de exportar -->
-            <div class="acciones-exportar">
-                <a href="/ventas/exportar" class="btn btn-success">📤 Exportar a Excel</a>
-                <a href="/ventas/exportar-pdf" class="btn btn-danger">📄 Exportar a PDF</a>
-            </div>
-
-            <!-- Filtros -->
-            <div class="filtros">
-                <label>Producto:</label>
-                <select id="productoFiltro" onchange="filtrar()">
-                    <option value="">Todos</option>
-                    <th:block th:each="producto : ${productos}">
-                        <option th:value="${producto}" th:text="${producto}"></option>
-                    </th:block>
-                </select>
-
-                <label>Empleado:</label>
-                <select id="empleadoFiltro" onchange="filtrar()">
-                    <option value="">Todos</option>
-                    <th:block th:each="empleado : ${empleados}">
-                        <option th:value="${empleado}" th:text="${empleado}"></option>
-                    </th:block>
-                </select>
-
-                <label>Fecha:</label>
-                <select id="fechaFiltro" onchange="filtrar()">
-                    <option value="">Todas</option>
-                    <th:block th:each="fecha : ${fechas}">
-                        <option th:value="${fecha}" th:text="${fecha}"></option>
-                    </th:block>
-                </select>
-            </div>
-
-            <!-- Tabla de ventas -->
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID Venta</th>
-                        <th>Producto</th>
-                        <th>Empleado</th>
-                        <th>Cantidad</th>
-                        <th>Total Venta</th>
-                        <th>Fecha</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaVentas">
-                    <tr th:each="venta : ${ventas}">
-                        <td th:text="${venta.id}">1</td>
-                      <td th:text="${venta.inventario != null && venta.inventario.producto != null   ? venta.inventario.producto.nombre : 'Sin producto'}"></td>
-
-                        <td th:text="${venta.empleado != null ? venta.empleado.nombre : 'Sin empleado'}">Empleado</td>
-                        <td th:text="${venta.cantidad != null ? venta.cantidad : 0}">Cantidad</td>
-                        <td th:text="${venta.totalVenta != null ? venta.totalVenta : 0}">Total</td>
-                        <td th:text="${venta.fecha != null ? #temporals.format(venta.fecha, 'yyyy-MM-dd HH:mm') : 'Sin fecha'}">Fecha</td>
-                        <td>
-                            <a th:href="@{'/ventas/exportar-pdf/' + ${venta.id}}" class="btn btn-danger">📄 PDF</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- Volver al home -->
-            <a th:href="@{/home}" class="volver-home">← Volver al Home</a>
-        </div>
+<div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <a th:href="@{/home}" class="button">Inicio</a>
+        <a th:href="@{/ventas/registrar}" class="button">Registrar Venta</a>
+        <a th:href="@{/producto}" class="button">Productos</a>
+        <a th:href="@{/empleado/lista}" class="button">Empleados</a>
     </div>
 
-    <script>
-        function filtrar() {
-            const producto = document.getElementById("productoFiltro").value.toLowerCase();
-            const empleado = document.getElementById("empleadoFiltro").value.toLowerCase();
-            const fecha = document.getElementById("fechaFiltro").value.toLowerCase();
+    <!-- Contenedor principal -->
+    <div class="card" style="flex:1; padding:20px;">
+        <h2>Lista de Ventas Realizadas</h2>
 
-            const filas = document.querySelectorAll("#tablaVentas tr");
+        <!-- Botones de exportar -->
+        <div class="acciones-exportar">
+            <a href="/ventas/exportar" class="btn btn-success">📤 Exportar a Excel</a>
+            <a href="/ventas/exportar-pdf" class="btn btn-danger">📄 Exportar a PDF</a>
+        </div>
 
-            filas.forEach(fila => {
-                const columnas = fila.getElementsByTagName("td");
-                if (columnas.length < 6) return;
+        <!-- Filtros -->
+        <div class="filtros">
+            <label>Producto:</label>
+            <select id="productoFiltro" onchange="filtrar()">
+                <option value="">Todos</option>
+                <th:block th:each="producto : ${productos}">
+                    <option th:value="${producto}" th:text="${producto}"></option>
+                </th:block>
+            </select>
 
-                const prodText = columnas[1].textContent.toLowerCase();
-                const empText = columnas[2].textContent.toLowerCase();
-                const fechaText = columnas[5].textContent.substring(0, 10).toLowerCase();
+            <label>Empleado:</label>
+            <select id="empleadoFiltro" onchange="filtrar()">
+                <option value="">Todos</option>
+                <th:block th:each="empleado : ${empleados}">
+                    <option th:value="${empleado}" th:text="${empleado}"></option>
+                </th:block>
+            </select>
 
-                const coincideProducto = !producto || prodText === producto;
-                const coincideEmpleado = !empleado || empText === empleado;
-                const coincideFecha = !fecha || fechaText === fecha;
+            <label>Fecha:</label>
+            <select id="fechaFiltro" onchange="filtrar()">
+                <option value="">Todas</option>
+                <th:block th:each="fecha : ${fechas}">
+                    <option th:value="${fecha}" th:text="${fecha}"></option>
+                </th:block>
+            </select>
+        </div>
 
-                fila.style.display = (coincideProducto && coincideEmpleado && coincideFecha) ? "" : "none";
-            });
-        }
-    </script>
+        <!-- Tabla de ventas -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Venta</th>
+                    <th>Productos</th>
+                    <th>Cantidad Total</th>
+                    <th>Empleado</th>
+                    <th>Proveedores</th>
+                    <th>Total Venta</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaVentas">
+                <tr th:each="venta : ${ventas}">
+                    <td th:text="${venta.id}">1</td>
+
+                    <!-- Productos: lista de nombres -->
+                    <td>
+                        <ul>
+                            <li th:each="detalle : ${venta.detalles}"
+                                th:text="${detalle.inventario != null && detalle.inventario.producto != null ? detalle.inventario.producto.nombre : 'Sin producto'}">
+                                Producto
+                            </li>
+                        </ul>
+                    </td>
+
+                    <!-- Cantidad Total de items vendidos -->
+                    <td th:text="${#lists.size(venta.detalles)}">Cantidad</td>
+
+                    <!-- Empleado: usar nombreEmpleado en lugar de empleado.nombre -->
+                    <td th:text="${venta.nombreEmpleado != null && venta.nombreEmpleado != '' ? venta.nombreEmpleado : 'Sin empleado'}">Empleado</td>
+
+                    <!-- Proveedores: nombres separados por comas -->
+                    <td>
+                        <span th:if="${#lists.isEmpty(venta.proveedores)}">—</span>
+                        <span th:each="prov,iterStat : ${venta.proveedores}">
+                            <span th:text="${prov.nombre}">Proveedor</span>
+                            <span th:if="${!iterStat.last}">, </span>
+                        </span>
+                    </td>
+
+                    <!-- Total venta -->
+                    <td th:text="${venta.totalVenta != null ? '$' + #numbers.formatDecimal(venta.totalVenta, 0, 'COMMA', 0, 'POINT') : '$0'}">Total</td>
+
+                    <!-- Fecha -->
+                    <td th:text="${venta.fecha != null ? #temporals.format(venta.fecha, 'yyyy-MM-dd HH:mm') : 'Sin fecha'}">Fecha</td>
+
+                    <!-- Acciones -->
+                    <td>
+                        <a th:href="@{'/ventas/exportar-pdf/' + ${venta.id}}" class="btn btn-danger">📄 PDF</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Volver al home -->
+        <a th:href="@{/home}" class="volver-home">← Volver al Home</a>
+    </div>
+</div>
+
+<script>
+    function filtrar() {
+        const producto = document.getElementById("productoFiltro").value.toLowerCase();
+        const empleado = document.getElementById("empleadoFiltro").value.toLowerCase();
+        const fecha = document.getElementById("fechaFiltro").value.toLowerCase();
+
+        const filas = document.querySelectorAll("#tablaVentas tr");
+
+        filas.forEach(fila => {
+            const columnas = fila.getElementsByTagName("td");
+            if (columnas.length < 8) return;
+
+            const prodText = Array.from(columnas[1].getElementsByTagName("li"))
+                                  .map(li => li.textContent.toLowerCase()).join(", ");
+            const empText = columnas[3].textContent.toLowerCase();
+            const fechaText = columnas[6].textContent.substring(0, 10).toLowerCase();
+
+            const coincideProducto = !producto || prodText.includes(producto);scroll
+            const coincideEmpleado = !empleado || empText === empleado;
+            const coincideFecha = !fecha || fechaText === fecha;
+
+            fila.style.display = (coincideProducto && coincideEmpleado && coincideFecha) ? "" : "none";
+        });
+    }
+</script>
 </body>
 </html>
-

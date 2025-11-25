@@ -14,6 +14,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 public class InventarioController {
@@ -26,10 +27,17 @@ public class InventarioController {
 
     @GetMapping("/inventario")
     public String verInventario(Model model) {
-        List<Inventario> inventarios = inventarioService.listar();
-        List<Producto> productos = productoRepository.findAll();
-        model.addAttribute("inventarios", inventarios);
-        model.addAttribute("productos", productos); // listado para seleccionar producto al crear inventario
+    // Filtrar inventarios y productos para excluir productos desactivados
+    List<Inventario> inventarios = inventarioService.listar().stream()
+        .filter(inv -> inv.getProducto() != null && Boolean.TRUE.equals(inv.getProducto().getActivo()))
+        .collect(Collectors.toList());
+
+    List<Producto> productos = productoRepository.findAll().stream()
+        .filter(p -> Boolean.TRUE.equals(p.getActivo()))
+        .collect(Collectors.toList());
+
+    model.addAttribute("inventarios", inventarios);
+    model.addAttribute("productos", productos); // listado para seleccionar producto al crear inventario (solo activos)
         return "inventario";
     }
 

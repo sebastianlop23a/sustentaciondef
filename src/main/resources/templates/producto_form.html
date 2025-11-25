@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${producto.id} == null ? 'Nuevo Producto' : 'Editar Producto'"></title>
+    <link rel="stylesheet" th:href="@{/productos.css}">
+    <script th:src="@{/js/precio-validator.js}"></script>
+
+    <style>
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin-top: 25px;
+        }
+
+        .form-box {
+            background: rgba(255,255,255,0.02);
+            padding: 22px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .form-box h3 {
+            margin-bottom: 12px;
+            font-size: 20px;
+            margin-top: 0;
+        }
+
+        .form-box label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .form-box input,
+        .form-box textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        textarea {
+            height: 110px;
+            resize: none;
+        }
+
+        .proveedores-box {
+            background: rgba(255,255,255,0.03);
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .proveedores-box h4 {
+            margin: 0 0 10px 0;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-btn {
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #555;
+            color: white;
+            font-weight: bold;
+        }
+
+        .toggle-btn.des {
+            background: #c0392b;
+        }
+
+        .toggle-btn.hab {
+            background: #27ae60;
+        }
+
+        .submit-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #555; color: white; }
+        .btn-delete { background: #c0392b; color: white; }
+
+    </style>
+</head>
+
+<body>
+<div class="card">
+
+    <h1 th:text="${producto.id} == null ? 'Nuevo Producto' : 'Editar Producto'"></h1>
+
+    <div class="top-actions" th:if="${producto.id != null}">
+        <button type="button"
+                id="toggleActivoBtn"
+                class="toggle-btn"
+                th:classappend="${producto.activo} ? 'des' : 'hab'"
+                th:text="${producto.activo} ? 'Deshabilitar' : 'Habilitar'">
+        </button>
+    </div>
+
+    <form id="productoForm" th:action="@{/producto/guardar}" method="post">
+
+        <input type="hidden" th:if="${producto.id != null}"
+               name="id" th:value="${producto.id}" />
+
+        <input type="hidden" name="activo" id="activoField" th:value="${producto.activo}" />
+
+        <!-- GRID -->
+        <div class="form-grid">
+
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="form-box">
+                <h3>Información del Producto</h3>
+
+                <label>Nombre</label>
+                <input type="text" name="nombre" th:value="${producto.nombre}" required>
+
+                <label style="margin-top:12px;">Precio (Formato: 1.234,56)</label>
+                <input type="text"
+                       id="precioInput"
+                       name="precio"
+                       placeholder="0,00"
+                       th:value="${producto.precio != null ? #numbers.formatDecimal(producto.precio, 0, 'POINT', 2, 'COMMA') : ''}"
+                       oninput="validatePriceInput(event)"
+                       onblur="formatPriceOnBlur(event)"
+                       required>
+                <small style="color:#999;">Ej: 1.234,56 (colombiano)</small>
+            </div>
+
+            <!-- COLUMNA DERECHA -->
+            <div class="form-box">
+                <h3>Descripción & Proveedores</h3>
+
+                <label>Descripción</label>
+                <textarea name="descripcion" th:text="${producto.descripcion}"></textarea>
+
+                <div class="proveedores-box">
+                    <h4>Proveedores</h4>
+
+                    <div th:each="prov : ${proveedores}">
+                        <label class="checkbox-label">
+                            <input type="checkbox"
+                                   name="proveedorIds"
+                                   th:value="${prov.id}"
+                                   th:checked="${producto.proveedores != null} ? ${producto.proveedores.contains(prov)} : false">
+                            <span th:text="${prov.nombre}"></span>
+                        </label>
+                    </div>
+
+                    <p th:if="${#lists.isEmpty(proveedores)}">
+                        No hay proveedores.
+                        <a th:href="@{/proveedores/nuevo}">Agregar uno</a>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTONES -->
+        <div class="submit-actions">
+            <button type="submit" class="btn btn-save">Guardar</button>
+            <a th:href="@{/producto}" class="btn btn-cancel">Cancelar</a>
+
+            <a th:if="${producto.id != null}"
+               th:href="@{|/producto/eliminar/${producto.id}|}"
+               class="btn btn-delete"
+               onclick="return confirm('¿Eliminar producto?')">Eliminar</a>
+        </div>
+
+    </form>
+</div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function(){
+    const toggleBtn = document.getElementById("toggleActivoBtn");
+    const activoField = document.getElementById("activoField");
+    const form = document.getElementById("productoForm");
+    const precioInput = document.getElementById("precioInput");
+
+    if(toggleBtn){
+        toggleBtn.addEventListener("click", function(){
+            const current = activoField.value === "true";
+            activoField.value = (!current).toString();
+
+            toggleBtn.textContent = current ? "Habilitar" : "Deshabilitar";
+            toggleBtn.classList.toggle("des");
+            toggleBtn.classList.toggle("hab");
+
+            form.submit();
+        });
+    }
+
+    if(form && precioInput){
+        form.addEventListener("submit", function(){
+            precioInput.value = parseColombianPrice(precioInput.value);
+        });
+    }
+})();
+/*]]>*/
+</script>
+
+</body>
+</html>

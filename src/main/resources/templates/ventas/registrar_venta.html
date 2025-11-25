@@ -4,92 +4,427 @@
     <meta charset="UTF-8">
     <title>Registrar Venta</title>
     <link rel="stylesheet" th:href="@{/registrar.css}">
+    
+    <style>
+
+        /* ===== BUSCADOR ===== */
+        #buscador {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        /* ===== GRID DE PRODUCTOS ===== */
+        .grid-productos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .card-producto {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            padding: 14px;
+            border-radius: 10px;
+            transition: 0.2s;
+        }
+
+        .card-producto:hover {
+            transform: scale(1.02);
+            border-color: #555;
+        }
+
+        .prod-info h4 {
+            margin: 0;
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .stock, .precio, .estado {
+            margin: 5px 0;
+            color: #ccc;
+        }
+
+        .btn-add {
+            margin-top: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px;
+            width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-add:hover {
+            background: #2980b9;
+        }
+
+        /* ===== CARRITO ===== */
+        #carrito {
+            margin-top: 15px;
+            background: #2b2b2b;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #444;
+        }
+
+        .carrito-item {
+            display: grid;
+            grid-template-columns: 1fr 90px 40px;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 10px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .carrito-item input[type="number"] {
+            width: 70px;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #121212;
+            color: white;
+        }
+
+        .btn-remove {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            padding: 6px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+        .submit-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* responsive minor adjustments */
+        @media (max-width: 700px) {
+            .grid-productos { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+            .carrito-item { grid-template-columns: 1fr 70px 36px; }
+        }
+
+    </style>
 </head>
+
 <body>
-    <div class="card">
-        <a th:href="@{/home}" class="btn-home">Volver al Home</a>
-        <h2>Registrar Nueva Venta</h2>
 
-        <form th:action="@{/ventas/registrar}" method="post">
-            
-            <!-- Selección de producto -->
-            <label for="inventarioSelect">Producto:</label>
-<select id="inventarioSelect" name="inventarioId" required>
-    <option th:each="inv : ${inventarios}" 
-            th:value="${inv.id}" 
-            th:text="${inv.producto.nombre}"
-            th:attr="data-cantidad=${inv.cantidad}">
-    </option>
-</select>
-<span id="cantidadDisponible" style="color:#74ebd5; font-weight:bold; margin-left:10px;"></span>
+<div class="card">
 
-            <!-- Cantidad -->
-            <label for="cantidadInput">Cantidad:</label>
-            <input type="number" id="cantidadInput" name="cantidad" min="1" required>
+    <a th:href="@{/home}" class="btn-home">Volver al Home</a>
+    <h2>Registrar Nueva Venta</h2>
 
-            <!-- Cliente -->
-            <label for="cliente">Cliente:</label>
-            <input type="text" id="cliente" name="cliente" required>
+    <form th:action="@{/ventas/registrar}" method="post" id="formVenta">
 
-            <!-- Método de pago -->
+        <!-- ==========================================
+                BUSCADOR
+        ============================================== -->
+        <input type="text" id="buscador" placeholder="Buscar producto...">
+
+
+        <!-- ==========================================
+                 LISTA DE PRODUCTOS TIPO TARJETAS
+        ============================================== -->
+        <h3>Productos Disponibles</h3>
+
+        <div class="grid-productos" id="listaProductos">
+
+            <div class="card-producto" 
+                 th:each="inv : ${inventarios}"
+                 th:attr="data-nombre=${inv.producto.nombre}">
+                <div class="prod-info">
+                    <h4 th:text="${inv.producto.nombre}">Nombre</h4>
+
+                    <p class="stock">Stock: <span th:text="${inv.cantidad}">0</span></p>
+
+                    <!-- Precio formateado con Thymeleaf: dos decimales -->
+                    <p class="precio">
+                      $ <span th:text="${#numbers.formatDecimal(inv.producto.precio, 0, 'COMMA', 2, 'POINT')}">0,00</span>
+                    </p>
+
+                    <p class="estado"
+                       th:text="${inv.producto.activo ? 'Activo' : 'Deshabilitado'}"
+                       th:style="${inv.producto.activo ? 'color:#6bc46b' : 'color:#e74c3c'}">
+                    </p>
+
+                    <!-- El onclick pasa datos stringificados; Spring recibirá id/cantidad al enviar el form -->
+                    <button type="button" class="btn-add"
+                            th:attr="onclick=|agregarAlCarrito('${inv.id}', '${inv.producto.nombre}', '${inv.cantidad}', '${inv.producto.precio}', '${inv.producto.activo}')|">
+                        Agregar
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ==========================================
+                       CARRITO
+        ============================================== -->
+        <h3>Productos Seleccionados</h3>
+
+        <div id="carrito">
+            <p id="carritoVacio">No hay productos seleccionados.</p>
+        </div>
+
+
+        <!-- ==========================================
+                 CAMPOS DE CLIENTE / PAGO
+        ============================================== -->
+        <div class="form-row">
+            <label for="clienteId">Cliente registrado (opcional):</label>
+            <select id="clienteId" name="clienteId" style="width:100%;">
+                <option value="">-- Cliente existente --</option>
+                <option th:each="cli : ${clientes}" th:value="${cli.id}" th:text="${cli.nombre}">Cliente</option>
+            </select>
+        </div>
+
+        <div class="form-row form-row-inline">
+            <div style="flex:1;">
+                <label for="cliente">Cliente (nombre libre):</label>
+                <input type="text" id="cliente" name="cliente" placeholder="Nombre del cliente">
+            </div>
+
+            <button type="button" onclick="window.open('/clientes/nuevo','_blank')" style="margin-top:22px;">
+                Registrar cliente
+            </button>
+        </div>
+
+        <div class="form-row">
+            <label>Documento:</label>
+            <!-- solo números, maxlength 10 -->
+            <input type="text" name="clienteDocumento" maxlength="10" 
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+        </div>
+
+        <div class="form-row">
+            <label>Teléfono:</label>
+            <!-- solo números, maxlength 10 -->
+            <input type="text" name="clienteTelefono" maxlength="10" 
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+        </div>
+
+        <div class="form-row">
+            <label>Dirección:</label>
+            <input type="text" name="clienteDireccion">
+        </div>
+
+        <div class="form-row">
             <label for="metodoPago">Método de pago:</label>
             <select id="metodoPago" name="metodoPago" required>
                 <option value="Efectivo">Efectivo</option>
                 <option value="Tarjeta">Tarjeta</option>
                 <option value="Transferencia">Transferencia</option>
             </select>
+        </div>
 
-            <!-- Fecha de venta -->
-            <label for="fechaVenta">Fecha de la venta:</label>
-            <input type="datetime-local" id="fechaVenta" name="fechaVenta"
-                   th:value="${#temporals.format(T(java.time.LocalDateTime).now(), 'yyyy-MM-dd''T''HH:mm')}">
-
+        <div class="submit-row">
             <button type="submit" class="btn-success">Registrar Venta</button>
-        </form>
-    </div>
+        </div>
 
-    <script>
-    const inventarioSelect = document.getElementById('inventarioSelect');
-    const cantidadInput = document.getElementById('cantidadInput');
-    const cantidadDisponibleSpan = document.getElementById('cantidadDisponible');
-    const form = document.querySelector('form');
-    const fechaVentaInput = document.getElementById('fechaVenta');
+    </form>
+</div>
 
-    function actualizarCantidadDisponible() {
-        const selectedOption = inventarioSelect.options[inventarioSelect.selectedIndex];
-        const cantidadDisponible = parseInt(selectedOption.getAttribute('data-cantidad'), 10);
-        cantidadDisponibleSpan.textContent = `Disponibles: ${cantidadDisponible}`;
+
+
+
+<!-- ==========================================
+            SCRIPT: MANEJO DEL CARRITO
+============================================== -->
+<script>
+
+let carrito = [];
+
+/* ==============================
+   AGREGAR PRODUCTO AL CARRITO
+   - No realiza venta automática
+   - Solo añade al carrito y crea inputs hidden
+============================== */
+function agregarAlCarrito(id, nombre, stock, precio, activo) {
+
+    // los valores vienen como strings desde el atributo onclick en Thymeleaf
+    // normalizamos:
+    stock = parseInt(stock);
+    precio = parseFloat(precio);
+    activo = ('' + activo) === 'true' || ('' + activo) === 'True';
+
+    if (!activo) {
+        alert("❌ Este producto está deshabilitado.");
+        return;
     }
 
-    inventarioSelect.addEventListener('change', actualizarCantidadDisponible);
-    window.addEventListener('DOMContentLoaded', actualizarCantidadDisponible);
+    if (stock <= 0) {
+        alert("❌ No hay stock disponible.");
+        return;
+    }
 
-    form.addEventListener('submit', function(e) {
-        const selectedOption = inventarioSelect.options[inventarioSelect.selectedIndex];
-        const cantidadDisponible = parseInt(selectedOption.getAttribute('data-cantidad'), 10);
-        const cantidadSolicitada = parseInt(cantidadInput.value, 10);
+    let existente = carrito.find(p => p.id === id);
 
-        if (cantidadDisponible === 0) {
-            e.preventDefault();
-            alert('No hay inventario disponible para este producto.');
-            return;
-        } else if (cantidadSolicitada > cantidadDisponible) {
-            e.preventDefault();
-            alert('No hay suficiente inventario disponible.');
+    if (existente) {
+        if (existente.cantidad + 1 > stock) {
+            alert("❌ No puedes agregar más de lo disponible.");
             return;
         }
+        existente.cantidad++;
+    } else {
+        carrito.push({
+            id: id,
+            nombre: nombre,
+            stock: stock,
+            precio: precio,
+            cantidad: 1
+        });
+    }
 
-        // Validar fecha
-        const fechaSeleccionada = new Date(fechaVentaInput.value);
-        const ahora = new Date();
-        // Quitar segundos y milisegundos para comparar solo hasta minutos
-        ahora.setSeconds(0, 0);
+    renderCarrito();
+}
 
-        if (fechaSeleccionada < ahora) {
-            e.preventDefault();
-            alert('No puedes registrar ventas con fecha anterior a la actual.');
-        }
+
+/* ==============================
+   MOSTRAR CARRITO
+   - Actualiza también los inputs hidden (inventarioId[], cantidad[])
+============================== */
+function renderCarrito() {
+
+    const cont = document.getElementById("carrito");
+    cont.innerHTML = "";
+
+    if (carrito.length === 0) {
+        cont.innerHTML = "<p id='carritoVacio'>No hay productos seleccionados.</p>";
+        return;
+    }
+
+    // reconstruimos el HTML del carrito por completo (evita errores con índices)
+    carrito.forEach((p, index) => {
+        // calcular total línea con separación de miles en JS (solo visual)
+        const totalLinea = (p.precio * p.cantidad).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        cont.innerHTML += `
+            <div class="carrito-item">
+                <div>
+                    <strong>${escapeHtml(p.nombre)}</strong><br>
+                    <small>Cantidad máx: ${p.stock}</small>
+                </div>
+
+                <input type="number"
+                       min="1"
+                       max="${p.stock}"
+                       value="${p.cantidad}"
+                       onchange="cambiarCantidad(${index}, this.value)">
+
+                <button type="button" class="btn-remove" onclick="eliminar(${index})">X</button>
+
+                <!-- Campos ocultos para enviar al backend (listas) -->
+                <input type="hidden" name="inventarioId" value="${p.id}">
+                <input type="hidden" name="cantidad" value="${p.cantidad}" class="cantidad-hidden-${index}">
+            </div>
+        `;
     });
+}
+
+/* ==============================
+   ESCAPE simple para evitar HTML injection en nombres
+============================== */
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+}
+
+/* ==============================
+   CAMBIAR CANTIDAD
+   - Actualiza el hidden correspondiente
+   - Re-renderiza para mantener coherencia
+============================== */
+function cambiarCantidad(index, nueva) {
+    nueva = parseInt(nueva);
+
+    if (isNaN(nueva) || nueva < 1) {
+        alert("Cantidad inválida.");
+        renderCarrito();
+        return;
+    }
+
+    if (nueva > carrito[index].stock) {
+        alert("❌ No puedes exceder el stock.");
+        renderCarrito();
+        return;
+    }
+
+    carrito[index].cantidad = nueva;
+    renderCarrito();
+}
+
+/* ==============================
+   ELIMINAR DEL CARRITO
+============================== */
+function eliminar(index) {
+    carrito.splice(index, 1);
+    renderCarrito();
+}
+
+/* ==============================
+   VALIDACIÓN FINAL PARA EVITAR 400
+   - Verifica que existan inputs inventarioId y cantidad
+   - Se asegura que cantidades estén dentro de stock
+============================== */
+document.getElementById("formVenta").addEventListener("submit", function(e) {
+
+    if (carrito.length === 0) {
+        e.preventDefault();
+        alert("❌ Debes seleccionar al menos 1 producto.");
+        return;
+    }
+
+    for (let p of carrito) {
+        if (p.cantidad < 1 || p.cantidad > p.stock) {
+            e.preventDefault();
+            alert("❌ Cantidad inválida en uno de los productos.");
+            return;
+        }
+    }
+
+    // Antes de enviar, sincronizamos los inputs hidden (por si quedaron desincronizados)
+    // Eliminamos cualquier hidden previo creado fuera de render (seguridad)
+    // Nota: renderCarrito ya crea los hidden con nombres "inventarioId" y "cantidad"
+    // por lo tanto al enviar el form Spring recibirá listas inventarioId[] y cantidad[].
+});
+
+/* ==============================
+   BUSCADOR DE PRODUCTOS
+============================== */
+document.getElementById("buscador").addEventListener("input", function() {
+    let texto = this.value.toLowerCase();
+    let cards = document.querySelectorAll(".card-producto");
+
+    cards.forEach(card => {
+        let nombre = (card.getAttribute("data-nombre") || "").toLowerCase();
+        card.style.display = nombre.includes(texto) ? "block" : "none";
+    });
+});
+
 </script>
+
 </body>
 </html>

@@ -51,12 +51,13 @@ public class PdfService {
     }
 
     private String safeProductName(Venta v) {
-        if (v.getInventario() != null && v.getInventario().getProducto() != null &&
-            v.getInventario().getProducto().getNombre() != null) {
-            return v.getInventario().getProducto().getNombre();
-        }
-        if (v.getNombreProducto() != null && !v.getNombreProducto().trim().isEmpty()) {
-            return v.getNombreProducto();
+        if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
+            try {
+                if (v.getDetalles().get(0).getInventario() != null && v.getDetalles().get(0).getInventario().getProducto() != null) {
+                    String name = v.getDetalles().get(0).getInventario().getProducto().getNombre();
+                    if (name != null && !name.trim().isEmpty()) return name;
+                }
+            } catch (Exception ignored) {}
         }
         return "N/A";
     }
@@ -66,9 +67,13 @@ public class PdfService {
     }
 
     private String safeUnitPriceFormatted(Venta v) {
-        if (v.getInventario() != null && v.getInventario().getProducto() != null &&
-            v.getInventario().getProducto().getPrecio() != null) {
-            return formatCurrency(v.getInventario().getProducto().getPrecio());
+        if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
+            try {
+                if (v.getDetalles().get(0).getInventario() != null && v.getDetalles().get(0).getInventario().getProducto() != null
+                        && v.getDetalles().get(0).getInventario().getProducto().getPrecio() != null) {
+                    return formatCurrency(v.getDetalles().get(0).getInventario().getProducto().getPrecio());
+                }
+            } catch (Exception ignored) {}
         }
         return "N/A";
     }
@@ -151,14 +156,36 @@ public class PdfService {
         BigDecimal totalVentas = BigDecimal.ZERO;
         for (Venta v : ventas) {
             if (v == null) continue;
-            tabla.addCell(safeDateFormatted(v));
-            tabla.addCell(safeProductName(v));
-            tabla.addCell(String.valueOf(v.getCantidad()));
-            String unit = safeUnitPriceFormatted(v);
-            tabla.addCell(unit);
-            BigDecimal total = safeTotal(v);
-            tabla.addCell(formatCurrency(total));
-            totalVentas = totalVentas.add(total);
+            if (v.getDetalles() == null || v.getDetalles().isEmpty()) {
+                tabla.addCell(safeDateFormatted(v));
+                tabla.addCell("N/A");
+                tabla.addCell("0");
+                tabla.addCell("N/A");
+                tabla.addCell(formatCurrency(safeTotal(v)));
+                totalVentas = totalVentas.add(safeTotal(v));
+                continue;
+            }
+
+            for (var d : v.getDetalles()) {
+                tabla.addCell(safeDateFormatted(v));
+                String prod = "N/A";
+                String unit = "N/A";
+                String qty = String.valueOf(d.getCantidad());
+                BigDecimal subtotal = BigDecimal.ZERO;
+                if (d.getInventario() != null && d.getInventario().getProducto() != null) {
+                    var prodObj = d.getInventario().getProducto();
+                    prod = prodObj.getNombre() != null ? prodObj.getNombre() : "N/A";
+                    if (prodObj.getPrecio() != null) {
+                        unit = formatCurrency(prodObj.getPrecio());
+                        subtotal = prodObj.getPrecio().multiply(BigDecimal.valueOf(d.getCantidad()));
+                    }
+                }
+                tabla.addCell(prod);
+                tabla.addCell(qty);
+                tabla.addCell(unit);
+                tabla.addCell(formatCurrency(subtotal));
+                totalVentas = totalVentas.add(subtotal);
+            }
         }
 
         documento.add(tabla);
@@ -212,10 +239,31 @@ public class PdfService {
                     tabla.addCell(cell);
                 });
 
-        tabla.addCell(safeProductName(venta));
-        tabla.addCell(String.valueOf(venta.getCantidad()));
-        tabla.addCell(safeUnitPriceFormatted(venta));
-        tabla.addCell(formatCurrency(safeTotal(venta)));
+        if (venta.getDetalles() == null || venta.getDetalles().isEmpty()) {
+            tabla.addCell("N/A");
+            tabla.addCell("0");
+            tabla.addCell("N/A");
+            tabla.addCell(formatCurrency(safeTotal(venta)));
+        } else {
+            for (var d : venta.getDetalles()) {
+                String prod = "N/A";
+                String unit = "N/A";
+                String qty = String.valueOf(d.getCantidad());
+                BigDecimal subtotal = BigDecimal.ZERO;
+                if (d.getInventario() != null && d.getInventario().getProducto() != null) {
+                    var p = d.getInventario().getProducto();
+                    prod = p.getNombre() != null ? p.getNombre() : "N/A";
+                    if (p.getPrecio() != null) {
+                        unit = formatCurrency(p.getPrecio());
+                        subtotal = p.getPrecio().multiply(BigDecimal.valueOf(d.getCantidad()));
+                    }
+                }
+                tabla.addCell(prod);
+                tabla.addCell(qty);
+                tabla.addCell(unit);
+                tabla.addCell(formatCurrency(subtotal));
+            }
+        }
 
         documento.add(tabla);
         documento.add(new Paragraph(" "));

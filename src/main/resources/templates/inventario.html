@@ -24,10 +24,11 @@
             <div class="campo">
                 <label>Producto:</label>
                 <select name="productoId" required>
-                    <option th:each="prod : ${productos}" 
-                            th:value="${prod.id}" 
-                            th:text="${prod.nombre}">
-                    </option>
+            <option th:each="prod : ${productos}" 
+                th:if="${prod.activo} != false"
+                th:value="${prod.id}" 
+                th:text="${prod.nombre}">
+            </option>
                 </select>
             </div>
 
@@ -117,6 +118,7 @@
                         <td colspan="6" class="sin-items">No hay productos en el inventario.</td>
                     </tr>
                     <tr th:each="inv : ${inventarios}"
+                        th:if="${inv.producto != null and inv.producto.activo != false}"
                         th:classappend="${inv.cantidad < 5} ? 'alerta-stock'">
                         <td th:text="${inv.id}"></td>
                         <td th:text="${inv.producto.nombre}"></td>

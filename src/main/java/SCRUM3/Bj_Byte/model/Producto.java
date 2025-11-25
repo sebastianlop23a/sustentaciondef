@@ -1,7 +1,9 @@
 package SCRUM3.Bj_Byte.model;
 
-import java.math.BigDecimal;
 import jakarta.persistence.*;
+import java.util.Set;
+import java.util.HashSet;
+import java.math.BigDecimal;
 
 @Entity
 public class Producto {
@@ -11,14 +13,35 @@ public class Producto {
     private Long id;
 
     private String nombre;
+
     private String descripcion;
 
     @Column(precision = 10, scale = 3)
     private BigDecimal precio;
 
-    private String cvv; // código opcional (puede ser interno o de referencia)
+    private String cvv; // Código o referencia interna del producto
 
-    // Getters y Setters
+    // Campo para marcar si el producto está exento de IVA
+    @Column(nullable = false)
+    private Boolean exento = false;
+
+    // Estado del producto en el sistema
+    @Column(nullable = false)
+    private Boolean activo = true;
+
+    @ManyToMany
+    @JoinTable(
+        name = "producto_proveedor",
+        joinColumns = @JoinColumn(name = "producto_id"),
+        inverseJoinColumns = @JoinColumn(name = "proveedor_id")
+    )
+    private Set<Proveedor> proveedores = new HashSet<>();
+
+
+    /* =====================================================
+                            GETTERS / SETTERS
+       ===================================================== */
+
     public Long getId() {
         return id;
     }
@@ -57,5 +80,29 @@ public class Producto {
 
     public void setCvv(String cvv) {
         this.cvv = cvv;
+    }
+
+    public Boolean getExento() {
+        return exento;
+    }
+
+    public void setExento(Boolean exento) {
+        this.exento = exento;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
+    public Set<Proveedor> getProveedores() {
+        return proveedores;
+    }
+
+    public void setProveedores(Set<Proveedor> proveedores) {
+        this.proveedores = proveedores;
     }
 }
