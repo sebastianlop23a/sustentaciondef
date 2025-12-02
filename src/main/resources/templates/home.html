@@ -135,33 +135,34 @@
 <body>
 
 <div th:if="${session.empleadoLogueado != null}" class="layout">
-    <!-- Menú lateral -->
     <nav class="sidebar">
         <a th:href="@{/empleados/logout}">Cerrar sesión</a>
         <a th:href="@{/producto}">Productos</a>
         <a th:href="@{/inventario}">Inventario</a>
         <a th:href="@{/ventas/registrar}">Registrar Venta</a>
+        <!-- Solo Admin (rol=1) puede ver listar ventas -->
         <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/ventas/lista}">Listar Ventas</a>
         <a th:href="@{/ventas/resumen}">Resumen Ventas</a>
         <a th:href="@{/ventas/mis-ventas}">Mis Ventas</a>
         <a th:href="@{/citas/agendar}">Agendar Cita</a>
         <a th:href="@{/citas}">Citas Agendadas</a>
-        <a th:href="@{/empleado/registro}">registrar empleado</a>
-    <a th:href="@{/clientes}">Clientes</a>
-    <a th:href="@{/clientes/nuevo}">Registrar cliente</a>
-    <a th:href="@{/proveedores}" class="btn-quick" style="margin-top:8px; background-color:#008CBA;">Proveedores</a>
+        <!-- Solo Admin (rol=1) puede registrar empleados -->
+        <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/empleado/registro}">Registrar Empleado</a>
+        <a th:href="@{/clientes}">Clientes</a>
+        <a th:href="@{/clientes/nuevo}">Registrar Cliente</a>
+        <!-- Solo Admin (rol=1) puede ver proveedores -->
+        <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/proveedores}" class="btn-quick" style="margin-top:8px; background-color:#008CBA;">Proveedores</a>
+        <!-- Solo Admin (rol=1) puede ver ganancias -->
+        <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/ganancias}" class="btn-quick" style="background-color: #38761d; margin-top: -5px;">💰 Ver Ganancias</a>
     </nav>
 
-    <!-- Contenido -->
     <div class="card">
         <h1>Bienvenido, <span th:text="${session.empleadoLogueado.nombre}">Empleado</span></h1>
 
-        <!-- Alertas -->
         <div th:if="${alerta != null}" class="alerta">
             <p th:text="${alerta}">Mensaje importante</p>
         </div>
 
-        <!-- Alertas de productos bajos -->
         <div th:if="${productosBajos != null and #lists.size(productosBajos) > 0}" class="alerta">
             <strong>⚠️ Productos con bajo stock:</strong>
             <ul>
@@ -170,7 +171,6 @@
             </ul>
         </div>
 
-        <!-- Estadísticas rápidas -->
         <div class="stats">
             <div class="stat-box">
                 <h2>Total Ventas Hoy</h2>
@@ -190,47 +190,46 @@
             </div>
         </div>
 
-        <!-- Gráfico de ventas -->
         <h2>Ventas de la Semana</h2>
-<canvas id="ventasChart" width="400" height="200"></canvas>
+        <canvas id="ventasChart" width="400" height="200"></canvas>
 
-<script th:inline="javascript">
+        <script th:inline="javascript">
 /*<![CDATA[*/
-    // Recibir ventas por día desde el backend
-    const ventasSemana = /*[[${ventasSemana}]]*/ [0,0,0,0,0,0,0];
+            // Recibir ventas por día desde el backend
+            const ventasSemana = /*[[${ventasSemana}]]*/ [0,0,0,0,0,0,0];
 
-    const ctx = document.getElementById('ventasChart').getContext('2d');
-    const ventasChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-            datasets: [{
-                label: 'Ventas (COP)',
-                data: ventasSemana,
-                backgroundColor: 'rgba(0, 140, 186, 0.2)',
-                borderColor: 'rgba(0, 140, 186, 1)',
-                borderWidth: 2,
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+            const ctx = document.getElementById('ventasChart').getContext('2d');
+            const ventasChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+                    datasets: [{
+                        label: 'Ventas (COP)',
+                        data: ventasSemana,
+                        backgroundColor: 'rgba(0, 140, 186, 0.2)',
+                        borderColor: 'rgba(0, 140, 186, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-    });
+            });
 /*]]>*/
-</script>
+        </script>
 
     </div>
 </div>

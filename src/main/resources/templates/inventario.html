@@ -5,74 +5,174 @@
     <meta charset="UTF-8">
     <title>Inventario</title>
     <link rel="stylesheet" th:href="@{/inventario.css}">
+    <style>
+        body {
+            background-color: #121212;
+            color: #f2f2f2;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .titulo-principal {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .acciones-top {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .alerta-stock {
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+
+        .tabla-inventario th, .tabla-inventario td {
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        .sin-items {
+            text-align: center;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .filtros-inventario {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .filtros-inventario label {
+            font-weight: bold;
+        }
+
+        .filtros-inventario input, .filtros-inventario select {
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        .form-inventario {
+            margin-bottom: 20px;
+        }
+
+        .form-inventario .campo {
+            margin-bottom: 12px;
+        }
+
+        .btn-agregar {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-agregar:hover {
+            background-color: #0b5ed7;
+        }
+
+        .tabla-contenedor {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #2c2c2c;
+        }
+
+        td, th {
+            border: 1px solid #444;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="acciones-top">
-        <a th:href="@{/home}" class="btn-home">🏠 Volver al Home</a>
-    </div>
+    <div class="container">
+        <div class="acciones-top">
+            <a th:href="@{/home}" class="btn-home">🏠 Volver al Home</a>
+        </div>
 
-    <div class="card">
-        <h1 class="titulo-principal">📦 Inventario</h1>
+        <div class="card">
+            <h1 class="titulo-principal">📦 Inventario</h1>
 
-        <!-- Solo visible para ADMIN -->
-        <form th:if="${session.empleadoLogueado.rolId == 1}" 
-              th:action="@{/inventario/agregar}" method="post" 
-              class="form-inventario">
-            
-            <!-- Producto -->
-            <div class="campo">
-                <label>Producto:</label>
-                <select name="productoId" required>
-            <option th:each="prod : ${productos}" 
-                th:if="${prod.activo} != false"
-                th:value="${prod.id}" 
-                th:text="${prod.nombre}">
-            </option>
-                </select>
-            </div>
+            <!-- FORMULARIO SOLO ADMIN -->
+            <form th:if="${session.empleadoLogueado.rolId == 1}"
+                  th:action="@{/inventario/agregar}" method="post"
+                  class="form-inventario">
 
-            <!-- Ubicación -->
-            <div class="campo">
-                <label>Ubicación:</label>
-                <select name="ubicacion" required>
-                    <option value="">-- Selecciona un estante --</option>
-                    <option value="Estante 1">Estante 1</option>
-                    <option value="Estante 2">Estante 2</option>
-                    <option value="Estante 3">Estante 3</option>
-                    <option value="Bodega">Bodega</option>
-                </select>
-            </div>
+                <div class="campo">
+                    <label>Producto:</label>
+                    <select name="productoId" required>
+                        <option th:each="prod : ${productos}" 
+                                th:if="${prod.activo}" 
+                                th:value="${prod.id}" 
+                                th:text="${prod.nombre}">
+                        </option>
+                    </select>
+                </div>
 
-            <!-- Estado -->
-            <div class="campo">
-                <label>Estado:</label>
-                <select name="estado" required>
-                    <option value="">-- Selecciona estado --</option>
-                    <option value="Disponible">Disponible</option>
-                    <option value="No disponible">No disponible</option>
-                </select>
-            </div>
+                <div class="campo">
+                    <label>Ubicación:</label>
+                    <select name="ubicacion" required>
+                        <option value="">-- Selecciona un estante --</option>
+                        <option value="Estante 1">Estante 1</option>
+                        <option value="Estante 2">Estante 2</option>
+                        <option value="Estante 3">Estante 3</option>
+                        <option value="Bodega">Bodega</option>
+                    </select>
+                </div>
 
-            <!-- Cantidad -->
-            <div class="campo">
-                <label>Cantidad:</label>
-                <input type="number" name="cantidad" min="1" required>
-            </div>
+                <div class="campo">
+                    <label>Estado:</label>
+                    <select name="estado" required>
+                        <option value="">-- Selecciona estado --</option>
+                        <option value="Disponible">Disponible</option>
+                        <option value="No disponible">No disponible</option>
+                    </select>
+                </div>
 
-            <!-- Observaciones -->
-            <div class="campo">
-                <label>Observaciones:</label>
-                <input type="text" name="observaciones">
-            </div>
+                <div class="campo">
+                    <label>Cantidad:</label>
+                    <input type="number" name="cantidad" min="1" required>
+                </div>
 
-            <!-- Botón -->
-            <button type="submit" class="btn-agregar">➕ Agregar entrada</button>
-        </form>
+                <div class="campo">
+                    <label>Observaciones:</label>
+                    <input type="text" name="observaciones">
+                </div>
 
-        <!-- Filtros -->
-        <div class="filtros-inventario">
-            <form id="filtroForm" onsubmit="filtrarTabla(event)">
+                <button type="submit" class="btn-agregar">➕ Agregar entrada</button>
+            </form>
+
+            <!-- FILTROS EN TIEMPO REAL -->
+            <div class="filtros-inventario">
                 <label>Producto:</label>
                 <input type="text" id="filtroProducto" placeholder="Nombre producto">
 
@@ -94,84 +194,96 @@
 
                 <label>Cantidad:</label>
                 <input type="number" id="filtroCantidad" min="1" placeholder="Cantidad">
+            </div>
 
-                <button type="submit">Filtrar</button>
-                <button type="button" onclick="limpiarFiltros()">Limpiar</button>
-            </form>
-        </div>
+            <!-- TABLA INVENTARIO -->
+            <div class="tabla-contenedor">
+                <table class="tabla-inventario" id="tablaInventario">
+                    <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>📦 Producto</th>
+                            <th>📍 Ubicación</th>
+                            <th>⚙️ Estado</th>
+                            <th>🔢 Cantidad</th>
+                            <th>📝 Observaciones</th>
+                            <th>💲 Precio Base</th>
+                            <th>💲 Precio Venta</th>
+                        </tr>
+                    </thead>
 
-        <!-- Todos ven la tabla -->
-        <div class="tabla-contenedor">
-            <table class="tabla-inventario" id="tablaInventario">
-                <thead>
-                    <tr>
-                        <th>#ID</th>
-                        <th>📦 Producto</th>
-                        <th>📍 Ubicación</th>
-                        <th>⚙️ Estado</th>
-                        <th>🔢 Cantidad</th>
-                        <th>📝 Observaciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:if="${#lists.isEmpty(inventarios)}">
-                        <td colspan="6" class="sin-items">No hay productos en el inventario.</td>
-                    </tr>
-                    <tr th:each="inv : ${inventarios}"
-                        th:if="${inv.producto != null and inv.producto.activo != false}"
-                        th:classappend="${inv.cantidad < 5} ? 'alerta-stock'">
-                        <td th:text="${inv.id}"></td>
-                        <td th:text="${inv.producto.nombre}"></td>
-                        <td th:text="${inv.ubicacion}"></td>
-                        <td th:text="${inv.estado}"></td>
-                        <td>
-                            <span th:text="${inv.cantidad}"></span>
-                            <span th:if="${inv.cantidad < 5}" style="color:#ff9800; font-weight:bold;">⚠️ Bajo stock</span>
-                        </td>
-                        <td th:text="${inv.observaciones}"></td>
-                    </tr>
-                </tbody>
-            </table>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(inventarios)}">
+                            <td colspan="8" class="sin-items">No hay productos en el inventario.</td>
+                        </tr>
+
+                        <tr th:each="inv : ${inventarios}" 
+                            th:if="${inv.producto != null and inv.producto.activo}"
+                            th:classappend="${inv.cantidad < 5} ? 'alerta-stock'">
+
+                            <td th:text="${inv.id}"></td>
+                            <td th:text="${inv.producto.nombre}"></td>
+                            <td th:text="${inv.ubicacion}"></td>
+                            <td th:text="${inv.estado}"></td>
+
+                            <!-- Cantidad -->
+                            <td>
+                                <span th:text="${inv.cantidad}"></span>
+                                <span th:if="${inv.cantidad < 5}" style="color:#ff9800; font-weight:bold;">⚠️ Bajo stock</span>
+                            </td>
+
+                            <td th:text="${inv.observaciones}"></td>
+
+                            <!-- Precio Base -->
+                            <td th:text="${#numbers.formatDecimal(inv.producto.precioBase, 0, 'POINT', 2, 'COMMA')}"></td>
+
+                            <!-- Precio Venta -->
+                            <td th:text="${#numbers.formatDecimal(inv.producto.precio, 0, 'POINT', 2, 'COMMA')}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-    function filtrarTabla(event) {
-        event.preventDefault();
-        const producto = document.getElementById('filtroProducto').value.toLowerCase();
-        const ubicacion = document.getElementById('filtroUbicacion').value.toLowerCase();
-        const estado = document.getElementById('filtroEstado').value.toLowerCase();
-        const cantidad = document.getElementById('filtroCantidad').value;
+        // FILTRO EN TIEMPO REAL
+        const filtroProducto = document.getElementById('filtroProducto');
+        const filtroUbicacion = document.getElementById('filtroUbicacion');
+        const filtroEstado = document.getElementById('filtroEstado');
+        const filtroCantidad = document.getElementById('filtroCantidad');
+        const filas = document.querySelectorAll("#tablaInventario tbody tr");
 
-        const tabla = document.getElementById('tablaInventario');
-        const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        function filtrar() {
+            const producto = filtroProducto.value.toLowerCase();
+            const ubicacion = filtroUbicacion.value.toLowerCase();
+            const estado = filtroEstado.value.toLowerCase();
+            const cantidad = filtroCantidad.value;
 
-        for (let i = 0; i < filas.length; i++) {
-            const celdas = filas[i].getElementsByTagName('td');
-            if (celdas.length < 6) continue; // Saltar fila "No hay productos"
+            filas.forEach(fila => {
+                if (fila.classList.contains('sin-items')) return;
 
-            const prodText = celdas[1].textContent.toLowerCase();
-            const ubiText = celdas[2].textContent.toLowerCase();
-            const estText = celdas[3].textContent.toLowerCase();
-            const cantText = celdas[4].textContent;
+                const celdas = fila.getElementsByTagName('td');
+                const prodText = celdas[1].textContent.toLowerCase();
+                const ubiText = celdas[2].textContent.toLowerCase();
+                const estText = celdas[3].textContent.toLowerCase();
+                const cantText = celdas[4].textContent;
 
-            let mostrar = true;
-            if (producto && !prodText.includes(producto)) mostrar = false;
-            if (ubicacion && ubiText !== ubicacion && ubicacion !== "") mostrar = false;
-            if (estado && estText !== estado && estado !== "") mostrar = false;
-            if (cantidad && cantText !== cantidad) mostrar = false;
+                let mostrar = true;
+                if (producto && !prodText.includes(producto)) mostrar = false;
+                if (ubicacion && ubiText !== ubicacion) mostrar = false;
+                if (estado && estText !== estado) mostrar = false;
+                if (cantidad && cantText !== cantidad) mostrar = false;
 
-            filas[i].style.display = mostrar ? '' : 'none';
+                fila.style.display = mostrar ? '' : 'none';
+            });
         }
-    }
 
-    function limpiarFiltros() {
-        document.getElementById('filtroProducto').value = '';
-        document.getElementById('filtroUbicacion').value = '';
-        document.getElementById('filtroEstado').value = '';
-        document.getElementById('filtroCantidad').value = '';
-        filtrarTabla(new Event('submit'));
-    }
+        // EVENTOS DE FILTRO EN TIEMPO REAL
+        filtroProducto.addEventListener('input', filtrar);
+        filtroUbicacion.addEventListener('change', filtrar);
+        filtroEstado.addEventListener('change', filtrar);
+        filtroCantidad.addEventListener('input', filtrar);
     </script>
 </body>
 </html>

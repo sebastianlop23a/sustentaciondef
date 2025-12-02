@@ -56,4 +56,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     @Transactional
     @Query("UPDATE Cita c SET c.estado = :estado WHERE c.id = :id")
     int actualizarEstado(@Param("id") Long id, @Param("estado") String estado);
+
+    List<Cita> findByFechaAndHoraAndCorreo(String fecha, String hora, String correo);
+
 }

@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 import SCRUM3.Bj_Byte.model.Venta;
 import SCRUM3.Bj_Byte.model.Empleado;
 import SCRUM3.Bj_Byte.repository.VentaRepository;
-import SCRUM3.Bj_Byte.repository.EmpleadoRepository;
+
 
 @Service
 public class PdfService {
@@ -37,8 +37,8 @@ public class PdfService {
     @Autowired
     private VentaRepository ventaRepository;
 
-    @Autowired
-    private EmpleadoRepository empleadoRepository;
+    // @Autowired
+    // private EmpleadoRepository empleadoRepository; // Actualmente no utilizado
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -50,6 +50,7 @@ public class PdfService {
         return (c != null && !c.trim().isEmpty()) ? c : "No registrado";
     }
 
+    @SuppressWarnings("unused")
     private String safeProductName(Venta v) {
         if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
             try {
@@ -66,6 +67,7 @@ public class PdfService {
         return v.getTotalVenta() != null ? v.getTotalVenta() : BigDecimal.ZERO;
     }
 
+    @SuppressWarnings("unused")
     private String safeUnitPriceFormatted(Venta v) {
         if (v.getDetalles() != null && !v.getDetalles().isEmpty()) {
             try {
@@ -116,7 +118,7 @@ public class PdfService {
         }
 
         for (DayOfWeek d : DayOfWeek.values()) {
-            dataset.addValue(ventasPorDiaSemana.get(d), "Ventas", d.getDisplayName(TextStyle.SHORT, new Locale("es", "ES")));
+            dataset.addValue(ventasPorDiaSemana.get(d), "Ventas", d.getDisplayName(TextStyle.SHORT, Locale.forLanguageTag("es-ES")));
         }
 
         // Crear gráfico

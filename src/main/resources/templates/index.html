@@ -2,11 +2,29 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Inicio</title>
-    <link rel="stylesheet" th:href="@{/global.css}">
+    <title>Iniciar Sesión</title>
+    <link rel="stylesheet" th:href="@{/login_registro.css}">
 </head>
 <body>
-    <h1>Bienvenido al sistema Bj-Byte</h1>
-    <p>Esta es la página principal</p>
+    <div class="card">
+        <h1>Iniciar Sesión</h1>
+
+        <!-- Importante: la ruta correcta es /empleado/login -->
+        <form th:action="@{/empleado/login}" method="post">
+            <label for="correo">Correo:</label>
+            <input type="email" id="correo" name="correo" required>
+
+            <label>Contraseña:</label>
+<input type="password" name="contrasena" required>
+
+
+            <button type="submit">Entrar</button>
+        </form>
+
+        <!-- Mostrar error si existe -->
+        <p th:if="${error}" th:text="${error}" style="color:red; font-weight:bold;"></p>
+
+      <a th:href="@{/empleado/registro}">registrar empleado</a>
+    </div>
 </body>
 </html>

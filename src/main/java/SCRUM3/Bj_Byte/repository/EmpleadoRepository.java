@@ -14,6 +14,9 @@ public interface EmpleadoRepository extends JpaRepository<Empleado, Long> {
     // Buscar solo empleados activos
     List<Empleado> findByActivoTrue();
 
-    // Buscar por correo y solo si está activo
+    // Buscar por correo y solo si está activo (retorna lista)
+    List<Empleado> findByCorreoAndActivoTrueOrderByIdDesc(String correo);
+
+    // Buscar por correo y solo si está activo (retorna Optional)
     Optional<Empleado> findByCorreoAndActivoTrue(String correo);
 }

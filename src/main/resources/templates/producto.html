@@ -62,10 +62,21 @@
     <h1>Lista de Productos</h1>
 
     <!-- ================================
+            MENSAJES DE ÉXITO/ERROR
+    ==================================== -->
+    <div th:if="${mensaje}" style="background: #d4edda; color: #155724; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #c3e6cb;">
+        ✓ <span th:text="${mensaje}"></span>
+    </div>
+    <div th:if="${error}" style="background: #f8d7da; color: #721c24; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #f5c6cb;">
+        ✗ <span th:text="${error}"></span>
+    </div>
+
+    <!-- ================================
             BOTONES SUPERIORES
     ==================================== -->
     <div class="header-actions">
-        <a th:href="@{/producto/nuevo}" class="btn">➕ Agregar Producto</a>
+        <!-- Solo Admin (rol=1) puede agregar productos -->
+        <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/producto/nuevo}" class="btn">➕ Agregar Producto</a>
         <a th:href="@{/home}" class="btn">🏠 Volver al Home</a>
     </div>
 
@@ -77,7 +88,7 @@
     <!-- ================================
             CARGAR CSV (solo admin)
     ==================================== -->
-    <form th:if="${session.empleadoLogueado.rolId == 1}" 
+    <form th:if="${empleadoLogueado != null and empleadoLogueado.rolId == 1}" 
           th:action="@{/producto/cargar-csv}" 
           method="post" enctype="multipart/form-data">
         <input type="file" name="archivo" accept=".csv" required>
@@ -94,9 +105,13 @@
             <th>Nombre</th>
             <th>Proveedores</th>
             <th>Estado</th>
+            <th>cvv</th>
+            <th>Exento</th>
+            <th>Ganancia</th>
+            <th>Precio</th>
+            <th>Precio Base</th>
             <th>Acciones</th>
             <th>Descripción</th>
-            <th>Precio</th>
         </tr>
         </thead>
 
@@ -120,8 +135,18 @@
 
             <td th:text="${producto.activo ? 'Activo' : 'Deshabilitado'}"></td>
 
-            <!-- ACCIONES -->
-            <td class="row-actions">
+            <td th:text="${producto.cvv != null ? producto.cvv : '-'}"></td>
+
+            <td th:text="${producto.exento ? 'Sí' : 'No'}"></td>
+
+            <td th:text="${producto.ganancia != null ? #numbers.formatDecimal(producto.ganancia, 1, 'POINT', 2, 'COMMA') : '-'}"></td>
+
+            <td th:text="${producto.precio != null ? #numbers.formatDecimal(producto.precio, 1, 'POINT', 2, 'COMMA') : '-'}"></td>
+
+            <td th:text="${producto.precioBase != null ? #numbers.formatDecimal(producto.precioBase, 1, 'POINT', 2, 'COMMA') : '-'}"></td>
+
+            <!-- ACCIONES - Solo Admin (rol=1) -->
+            <td class="row-actions" th:if="${session.empleadoLogueado.rolId == 1}">
                 <a th:href="@{|/producto/editar/${producto.id}|}" class="btn">Editar</a>
 
                 <a th:href="@{|/producto/eliminar/${producto.id}|}"
@@ -130,10 +155,12 @@
                     Eliminar
                 </a>
             </td>
+            <!-- Para Cajero (rol=2), solo lectura -->
+            <td th:unless="${session.empleadoLogueado.rolId == 1}" style="color: #999; font-style: italic;">
+                [Solo lectura]
+            </td>
 
             <td th:text="${producto.descripcion}"></td>
-
-            <td th:text="${#numbers.formatDecimal(producto.precio, 1, 'POINT', 2, 'COMMA')}"></td>
         </tr>
 
         </tbody>

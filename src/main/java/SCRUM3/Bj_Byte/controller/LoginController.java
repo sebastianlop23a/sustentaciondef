@@ -29,7 +29,7 @@ public class LoginController {
         if (session.getAttribute("empleadoLogueado") != null) {
             return "redirect:/home"; 
         }
-        return "login";
+        return "index";
     }
 
     // Procesar login
@@ -52,11 +52,11 @@ public class LoginController {
         } 
         else if (empleado != null && !empleado.isActivo()) {
             model.addAttribute("error", "El empleado está inactivo. Contacta al administrador.");
-            return "login";
+            return "index";
         } 
         else {
             model.addAttribute("error", "Correo o contraseña incorrectos");
-            return "login";
+            return "index";
         }
     }
 

@@ -10,22 +10,20 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    // BEAN CORRECTO: crea un BCryptPasswordEncoder real
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(); // Bean para encriptar y comparar contraseñas
     }
 
-    // CONFIGURACIÓN DE FILTROS
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) 
+            .csrf(csrf -> csrf.disable()) // desactiva CSRF para desarrollo
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/empleado/**", "/css/**", "/js/**").permitAll()
+                .requestMatchers("/empleado/**", "/css/**", "/js/**").permitAll() // Ojo: en tu controlador usas /empleado
                 .anyRequest().permitAll()
             )
-            .formLogin(form -> form.disable()); 
+            .formLogin(form -> form.disable()); // desactiva login por defecto
 
         return http.build();
     }

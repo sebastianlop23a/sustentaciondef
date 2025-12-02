@@ -76,7 +76,7 @@ public class CitaController {
     public String listarCitas(Model model) {
         List<Cita> citas = citaRepository.findAll();
         model.addAttribute("citas", citas);
-        return "listar_citas";
+        return "Listar_citas";
     }
 
     // ================================
@@ -192,4 +192,25 @@ public class CitaController {
         redirectAttributes.addFlashAttribute("mensaje", "Se enviaron correos masivos a " + destinatarios.size() + " citas pendientes.");
         return "redirect:/citas";
     }
+//elimiar cita
+@PostMapping("/eliminar-por-datos")
+public String eliminarCitaPorDatos(
+        @RequestParam("fecha") String fecha,
+        @RequestParam("hora") String hora,
+        @RequestParam("correo") String correo,
+        RedirectAttributes redirectAttributes) {
+
+    List<Cita> citas = citaRepository.findByFechaAndHoraAndCorreo(fecha, hora, correo);
+
+    if (citas.isEmpty()) {
+        redirectAttributes.addFlashAttribute("mensaje", "No se encontró ninguna cita con esos datos.");
+    } else {
+        // Si hay varias coincidencias, eliminamos todas o la primera
+        citas.forEach(citaRepository::delete);
+        redirectAttributes.addFlashAttribute("mensaje", "Cita(s) eliminada(s) correctamente.");
+    }
+
+    return "redirect:/citas";
+}
+
 }

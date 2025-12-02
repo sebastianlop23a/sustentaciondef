@@ -31,7 +31,7 @@ public class HomeController {
     private InventarioRepository inventarioRepo;
 
     // ==========================
-    // 📌 Redirige desde la raíz al login
+    // 📌 Redirige desde la raíz al login/index
     // ==========================
     @GetMapping("/")
     public String redirigirAlLogin() {
@@ -75,6 +75,8 @@ public class HomeController {
         Long productosTotales = inventarioRepo.count();
         productosTotales = productosTotales != null ? productosTotales : 0L;
 
+        // NOTA: EL CÁLCULO DE GANANCIA HISTÓRICA SE HA MOVIDO AL GANANCIA CONTROLLER
+
         // ==========================
         // 📊 Ventas de la semana (Lunes a Domingo)
         // ==========================
@@ -105,6 +107,7 @@ public class HomeController {
         model.addAttribute("citasPendientes", citasPendientes);
         model.addAttribute("productosTotales", productosTotales);
         model.addAttribute("ventasSemana", ventasSemana);
+        // NO se pasa gananciaTotalHistorica
 
         return "home"; // apunta a templates/home.html
     }

@@ -4,7 +4,11 @@
     <title>Resumen de Ventas</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" th:href="@{/ventas.css}">
+        <link rel="stylesheet" th:href="@{/resumen-ventas.css}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            /* Removed inline styles for external CSS */
+        </style>
 </head>
 <body>
 <div class="layout">
@@ -19,75 +23,101 @@
         <h2>Resumen de ventas para <span th:text="${empleado.nombre}">Empleado</span></h2>
 
         <!-- Totales en COP -->
-        <p>Total vendido hoy: 
-            <span th:text="${#numbers.formatDecimal(totalHoy, 0, 'POINT', 0, 'POINT')}"></span> COP
-        </p>
-        <p>Total vendido históricamente: 
-            <span th:text="${#numbers.formatDecimal(totalHistorico, 0, 'POINT', 0, 'POINT')}"></span> COP
-        </p>
+        <div class="metrics-container">
+            <div class="metric-card">
+                <h3>Total Hoy (COP)</h3>
+                <div class="value" th:text="${#numbers.formatDecimal(totalHoy, 0, 'POINT', 0, 'POINT')}">0</div>
+            </div>
+            <div class="metric-card">
+                <h3>Total Histórico (COP)</h3>
+                <div class="value" th:text="${#numbers.formatDecimal(totalHistorico, 0, 'POINT', 0, 'POINT')}">0</div>
+            </div>
+        </div>
 
         <!-- Totales en USD y EUR -->
-        <p>Equivalente en USD (Hoy): 
-            $ <span th:text="${#numbers.formatDecimal(totalHoyUSD, 2, 'POINT', 2, 'POINT')}"></span>
-        </p>
-        <p>Equivalente en EUR (Hoy): 
-            € <span th:text="${#numbers.formatDecimal(totalHoyEUR, 2, 'POINT', 2, 'POINT')}"></span>
-        </p>
-        <p>Equivalente en USD (Histórico): 
-            $ <span th:text="${#numbers.formatDecimal(totalHistoricoUSD, 2, 'POINT', 2, 'POINT')}"></span>
-        </p>
-        <p>Equivalente en EUR (Histórico): 
-            € <span th:text="${#numbers.formatDecimal(totalHistoricoEUR, 2, 'POINT', 2, 'POINT')}"></span>
-        </p>
+        <div class="metrics-container">
+            <div class="metric-card usd">
+                <h3>USD - Hoy</h3>
+                <div class="value">$ <span th:text="${#numbers.formatDecimal(totalHoyUSD, 2, 'POINT', 2, 'POINT')}">0.00</span></div>
+            </div>
+            <div class="metric-card usd">
+                <h3>USD - Histórico</h3>
+                <div class="value">$ <span th:text="${#numbers.formatDecimal(totalHistoricoUSD, 2, 'POINT', 2, 'POINT')}">0.00</span></div>
+            </div>
+            <div class="metric-card eur">
+                <h3>EUR - Hoy</h3>
+                <div class="value">€ <span th:text="${#numbers.formatDecimal(totalHoyEUR, 2, 'POINT', 2, 'POINT')}">0.00</span></div>
+            </div>
+            <div class="metric-card eur">
+                <h3>EUR - Histórico</h3>
+                <div class="value">€ <span th:text="${#numbers.formatDecimal(totalHistoricoEUR, 2, 'POINT', 2, 'POINT')}">0.00</span></div>
+            </div>
+        </div>
 
         <hr>
         <!-- Fecha de actualización de tasas -->
-        <p style="font-size: 0.9em; color: gray;">
-            Tasas de cambio actualizadas: 
+        <p style="font-size: 0.9em; color: gray; margin: 10px 0;">
+            <strong>Tasas de cambio actualizadas:</strong> 
             <span th:text="${ultimaActualizacion}">Fecha</span>
         </p>
 
         <!-- Gráficos -->
-        <div style="display: flex; gap: 30px; flex-wrap: wrap; margin-top: 20px;">
-            <div style="flex: 1; min-width: 300px;">
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <h3>Ventas por Día (últimos 7 días)</h3>
                 <canvas id="barChart"></canvas>
             </div>
-            <div style="flex: 1; min-width: 300px;">
+            <div class="chart-wrapper">
+                <h3>Proporción: Hoy vs Histórico Restante</h3>
                 <canvas id="pieChart"></canvas>
             </div>
         </div>
 
-        <a th:href="@{/empleado/home}" class="volver-home">← Volver al inicio</a>
+        <div style="margin-top: 30px;">
+            <a th:href="@{/empleado/home}" class="volver-home">← Volver al inicio</a>
+        </div>
     </div>
 </div>
 
 <script th:inline="javascript">
 /*<![CDATA[*/
-    // Asegúrate que estas variables son números en el controlador
+    // Datos del servidor
     const totalHoy = /*[[${totalHoy}]]*/ 0;
     const totalHistorico = /*[[${totalHistorico}]]*/ 0;
     const ventasPorDia = /*[[${ventasPorDia}]]*/ [0,0,0,0,0,0,0];
 
-    // Gráfico de barras: Ventas por día
+    // Gráfico de barras: Ventas por día (últimos 7 días)
     const ctxBar = document.getElementById('barChart').getContext('2d');
     new Chart(ctxBar, {
         type: 'bar',
         data: {
-            labels: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+            labels: ['Hace 6 días', 'Hace 5 días', 'Hace 4 días', 'Hace 3 días', 'Hace 2 días', 'Ayer', 'Hoy'],
             datasets: [{
-                label: 'Ventas en COP',
+                label: 'Ventas (COP)',
                 data: ventasPorDia,
-                backgroundColor: '#4CAF50'
+                backgroundColor: [
+                    '#9C27B0',
+                    '#2196F3',
+                    '#00BCD4',
+                    '#4CAF50',
+                    '#8BC34A',
+                    '#FF9800',
+                    '#F44336'
+                ],
+                borderRadius: 4,
+                borderSkipped: false
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: { 
-                legend: { display: false },
+                legend: { display: true, position: 'top' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.raw.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+                            const value = context.raw || 0;
+                            return 'COP: ' + value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
                         }
                     }
                 }
@@ -97,7 +127,12 @@
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+                            if (value >= 1000000) {
+                                return (value / 1000000).toFixed(1) + 'M';
+                            } else if (value >= 1000) {
+                                return (value / 1000).toFixed(0) + 'K';
+                            }
+                            return value.toLocaleString('es-CO');
                         }
                     }
                 }
@@ -107,23 +142,34 @@
 
     // Gráfico de pastel: Hoy vs Histórico restante
     const ctxPie = document.getElementById('pieChart').getContext('2d');
+    const historicoRestante = Math.max(totalHistorico - totalHoy, 0);
+    
     new Chart(ctxPie, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
-            labels: ['Hoy', 'Histórico restante'],
+            labels: [
+                'Ventas Hoy (' + totalHoy.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }) + ')',
+                'Histórico Restante (' + historicoRestante.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }) + ')'
+            ],
             datasets: [{
-                data: [totalHoy, Math.max(totalHistorico - totalHoy, 0)],
-                backgroundColor: ['#FF9800', '#9C27B0']
+                data: [totalHoy, historicoRestante],
+                backgroundColor: ['#FF6B6B', '#4ECDC4'],
+                borderColor: ['#fff', '#fff'],
+                borderWidth: 2
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: { 
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ' + context.raw.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+                            const value = context.parsed || 0;
+                            const total = totalHoy + historicoRestante;
+                            const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }) + ' (' + porcentaje + '%)';
                         }
                     }
                 }

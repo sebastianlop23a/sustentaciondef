@@ -1,79 +1,83 @@
 package SCRUM3.Bj_Byte.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 public class EmailService {
 
     @Autowired
     private JavaMailSender mailSender;
 
+    // Cargar remitente desde application.properties
+    @Value("${spring.mail.username}")
+    private String remitente;
+
     /**
-     * 📧 Envía un correo electrónico a un solo destinatario.
-     *
-     * @param para   Dirección de correo del destinatario
-     * @param asunto Asunto del correo
-     * @param cuerpo Contenido del correo
+     * Enviar correo a un destinatario
      */
     public void enviarCorreo(String para, String asunto, String cuerpo) {
+
+        if (para == null || para.trim().isEmpty()) {
+            log.error("Intento de enviar correo sin destinatario.");
+            return;
+        }
+
         SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom("noreply@miapp.com"); // remitente ficticio
+        mensaje.setFrom(remitente);
         mensaje.setTo(para);
         mensaje.setSubject(asunto);
         mensaje.setText(cuerpo);
 
         try {
             mailSender.send(mensaje);
-            System.out.println("✅ Correo enviado a: " + para);
+            log.info("Correo enviado correctamente a {}", para);
         } catch (Exception e) {
-            System.err.println("❌ Error al enviar correo a " + para + ": " + e.getMessage());
+            log.error("Error al enviar correo a {}: {}", para, e.getMessage());
         }
     }
 
     /**
-     * 📧 Envía el mismo correo a varios destinatarios (uno por uno).
-     * Ideal para evitar que todos vean las direcciones de los demás.
-     *
-     * @param destinatarios Lista de correos
-     * @param asunto        Asunto del correo
-     * @param cuerpo        Contenido del correo
+     * Enviar correo a varios destinatarios (uno por uno)
      */
     public void enviarCorreoMasivo(List<String> destinatarios, String asunto, String cuerpo) {
-        for (String correo : destinatarios) {
-            enviarCorreo(correo, asunto, cuerpo);
+
+        if (destinatarios == null || destinatarios.isEmpty()) {
+            log.warn("Lista de destinatarios vacía en envío masivo.");
+            return;
         }
+
+        destinatarios.forEach(dest -> enviarCorreo(dest, asunto, cuerpo));
     }
 
     /**
-     * 📧 Envía un solo correo con todos los destinatarios en copia oculta (BCC).
-     * Útil si quieres hacer un envío rápido (menos recomendado si quieres personalización).
-     *
-     * @param destinatarios Lista de correos
-     * @param asunto        Asunto del correo
-     * @param cuerpo        Contenido del correo
+     * Enviar correo masivo usando BCC
      */
     public void enviarCorreoMasivoBCC(List<String> destinatarios, String asunto, String cuerpo) {
+
         if (destinatarios == null || destinatarios.isEmpty()) {
-            System.out.println("⚠️ No hay destinatarios para el correo masivo.");
+            log.warn("No hay destinatarios para envío masivo BCC.");
             return;
         }
 
         SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom("noreply@miapp.com");
-        mensaje.setBcc(destinatarios.toArray(new String[0])); // todos en BCC
+        mensaje.setFrom(remitente);
+        mensaje.setBcc(destinatarios.toArray(new String[0]));
         mensaje.setSubject(asunto);
         mensaje.setText(cuerpo);
 
         try {
             mailSender.send(mensaje);
-            System.out.println("✅ Correo masivo enviado a " + destinatarios.size() + " destinatarios.");
+            log.info("Correo masivo enviado a {} destinatarios (BCC).", destinatarios.size());
         } catch (Exception e) {
-            System.err.println("❌ Error en envío masivo: " + e.getMessage());
+            log.error("Error en envío masivo BCC: {}", e.getMessage());
         }
     }
 }

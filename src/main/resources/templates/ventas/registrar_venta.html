@@ -7,119 +7,262 @@
     
     <style>
 
-        /* ===== BUSCADOR ===== */
-        #buscador {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #1e1e1e;
-            color: white;
-        }
+   /* ============================= */
+/* GLOBAL */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-        /* ===== GRID DE PRODUCTOS ===== */
-        .grid-productos {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-            gap: 18px;
-            margin-bottom: 25px;
-        }
+body {
+    background: linear-gradient(160deg, #0f0f0f, #1a1a1a);
+    color: #fff;
+    padding: 20px;
+}
 
-        .card-producto {
-            background: #1e1e1e;
-            border: 1px solid #333;
-            padding: 14px;
-            border-radius: 10px;
-            transition: 0.2s;
-        }
+/* ============================= */
+/* BUSCADOR */
+#buscador {
+    width: 100%;
+    padding: 14px 18px;
+    margin-bottom: 30px;
+    border-radius: 12px;
+    border: none;
+    background-color: #222;
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+}
 
-        .card-producto:hover {
-            transform: scale(1.02);
-            border-color: #555;
-        }
+#buscador:focus {
+    outline: none;
+    box-shadow: 0 0 15px #3498db;
+    background-color: #1a1a1a;
+}
 
-        .prod-info h4 {
-            margin: 0;
-            font-size: 18px;
-            color: #fff;
-        }
+/* ============================= */
+/* SLIDER PRODUCTOS */
+.productos-slider {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+}
 
-        .stock, .precio, .estado {
-            margin: 5px 0;
-            color: #ccc;
-        }
+.slider-arrow {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 12px 15px;
+    cursor: pointer;
+    font-size: 26px;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
 
-        .btn-add {
-            margin-top: 10px;
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 8px;
-            width: 100%;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+.slider-arrow:hover {
+    transform: scale(1.2);
+    background-color: #27ae60;
+}
 
-        .btn-add:hover {
-            background: #2980b9;
-        }
+.grid-productos {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 10px 0;
+    scroll-snap-type: x mandatory;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-        /* ===== CARRITO ===== */
-        #carrito {
-            margin-top: 15px;
-            background: #2b2b2b;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #444;
-        }
+.grid-productos::-webkit-scrollbar {
+    display: none;
+}
 
-        .carrito-item {
-            display: grid;
-            grid-template-columns: 1fr 90px 40px;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            margin-bottom: 10px;
-            background: #1e1e1e;
-            border-radius: 8px;
-            border: 1px solid #333;
-        }
+/* ============================= */
+/* TARJETAS PRODUCTO */
+.card-producto {
+    flex-shrink: 0;
+    width: 220px;
+    background: linear-gradient(145deg, #1e1e1e, #2c2c2c);
+    border-radius: 15px;
+    border: 1px solid #333;
+    padding: 15px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
 
-        .carrito-item input[type="number"] {
-            width: 70px;
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px solid #555;
-            background: #121212;
-            color: white;
-        }
+.card-producto:hover {
+    transform: scale(1.08) rotate(-1deg);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    border-color: #3498db;
+}
 
-        .btn-remove {
-            background: #e74c3c;
-            border: none;
-            color: white;
-            padding: 6px 8px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+.prod-info h4 {
+    font-size: 18px;
+    margin-bottom: 6px;
+    text-align: center;
+    color: #fff;
+}
 
-        .btn-remove:hover {
-            background: #c0392b;
-        }
+.prod-info .stock,
+.prod-info .precio,
+.prod-info .estado {
+    font-size: 13px;
+    color: #bbb;
+    margin: 3px 0;
+    text-align: center;
+}
 
-        .submit-row {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
+.btn-add {
+    margin-top: 12px;
+    background: #e67e22;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    transition: all 0.3s ease;
+}
 
-        /* responsive minor adjustments */
-        @media (max-width: 700px) {
-            .grid-productos { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
-            .carrito-item { grid-template-columns: 1fr 70px 36px; }
-        }
+.btn-add:hover {
+    background: #d35400;
+    transform: scale(1.05);
+}
+
+/* ============================= */
+/* CARRITO FLOTANTE */
+#carrito {
+    position: fixed;
+    right: 20px;
+    top: 100px;
+    width: 300px;
+    background-color: #1b1b1b;
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid #333;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 20;
+    transition: all 0.3s ease;
+}
+
+#carrito h3 {
+    margin-bottom: 15px;
+    text-align: center;
+    color: #3498db;
+    font-size: 20px;
+}
+
+.carrito-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #444;
+    transition: all 0.2s ease;
+}
+
+.carrito-item:hover {
+    background: #333;
+}
+
+.carrito-item input[type="number"] {
+    width: 50px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background-color: #121212;
+    color: #fff;
+}
+
+.btn-remove {
+    background-color: #c0392b;
+    border: none;
+    color: #fff;
+    padding: 5px 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background-color: #e74c3c;
+    transform: scale(1.2);
+}
+
+.submit-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.submit-row button {
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: none;
+    background: #27ae60;
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.submit-row button:hover {
+    background: #2ecc71;
+    transform: scale(1.05);
+}
+
+/* ============================= */
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+    .card-producto { width: 200px; }
+    #carrito { width: 260px; }
+}
+
+@media (max-width: 900px) {
+    .card-producto { width: 180px; }
+    #carrito { width: 240px; top: 80px; }
+}
+
+@media (max-width: 700px) {
+    .card-producto { width: 150px; }
+    #carrito { width: 220px; top: 60px; }
+}
+
+@media (max-width: 500px) {
+    .productos-slider {
+        flex-direction: column;
+    }
+    .slider-arrow {
+        align-self: center;
+    }
+    .card-producto { width: 100%; min-width: 0; }
+    #carrito {
+        width: 90%;
+        top: auto;
+        bottom: 20px;
+        right: 50%;
+        transform: translateX(50%);
+        max-height: 50vh;
+    }
+}
+
 
     </style>
 </head>
@@ -133,51 +276,48 @@
 
     <form th:action="@{/ventas/registrar}" method="post" id="formVenta">
 
-        <!-- ==========================================
-                BUSCADOR
-        ============================================== -->
         <input type="text" id="buscador" placeholder="Buscar producto...">
 
 
-        <!-- ==========================================
-                 LISTA DE PRODUCTOS TIPO TARJETAS
-        ============================================== -->
         <h3>Productos Disponibles</h3>
 
-        <div class="grid-productos" id="listaProductos">
+        <div class="productos-slider">
+            
+            <button type="button" class="slider-arrow" id="arrowLeft" onclick="scrollLeft()">&#10094;</button>
 
-            <div class="card-producto" 
-                 th:each="inv : ${inventarios}"
-                 th:attr="data-nombre=${inv.producto.nombre}">
-                <div class="prod-info">
-                    <h4 th:text="${inv.producto.nombre}">Nombre</h4>
+            <div class="grid-productos" id="listaProductos">
 
-                    <p class="stock">Stock: <span th:text="${inv.cantidad}">0</span></p>
+                <div class="card-producto" 
+                     th:each="inv : ${inventarios}"
+                     th:attr="data-nombre=${inv.producto.nombre}"
+                     th:data-producto-id="${inv.id}"> <div class="prod-info">
+                        <h4 th:text="${inv.producto.nombre}">Nombre</h4>
 
-                    <!-- Precio formateado con Thymeleaf: dos decimales -->
-                    <p class="precio">
-                      $ <span th:text="${#numbers.formatDecimal(inv.producto.precio, 0, 'COMMA', 2, 'POINT')}">0,00</span>
-                    </p>
+                        <p class="stock">Stock: <span th:text="${inv.cantidad}">0</span></p>
 
-                    <p class="estado"
-                       th:text="${inv.producto.activo ? 'Activo' : 'Deshabilitado'}"
-                       th:style="${inv.producto.activo ? 'color:#6bc46b' : 'color:#e74c3c'}">
-                    </p>
+                        <p class="precio">
+                          $ <span th:text="${#numbers.formatDecimal(inv.producto.precio, 0, 'COMMA', 2, 'POINT')}">0,00</span>
+                        </p>
 
-                    <!-- El onclick pasa datos stringificados; Spring recibirá id/cantidad al enviar el form -->
-                    <button type="button" class="btn-add"
-                            th:attr="onclick=|agregarAlCarrito('${inv.id}', '${inv.producto.nombre}', '${inv.cantidad}', '${inv.producto.precio}', '${inv.producto.activo}')|">
-                        Agregar
-                    </button>
+                        <p class="estado"
+                           th:text="${inv.producto.activo ? 'Activo' : 'Deshabilitado'}"
+                           th:style="${inv.producto.activo ? 'color:#6bc46b' : 'color:#e74c3c'}">
+                        </p>
+
+                        <button type="button" class="btn-add"
+                                th:attr="onclick=|agregarAlCarrito('${inv.id}', '${inv.producto.nombre}', '${inv.cantidad}', '${inv.producto.precio}', '${inv.producto.activo}')|">
+                            Agregar
+                        </button>
+                    </div>
                 </div>
+
             </div>
+            
+            <button type="button" class="slider-arrow" id="arrowRight" onclick="scrollRight()">&#10095;</button>
 
         </div>
 
 
-        <!-- ==========================================
-                       CARRITO
-        ============================================== -->
         <h3>Productos Seleccionados</h3>
 
         <div id="carrito">
@@ -185,9 +325,6 @@
         </div>
 
 
-        <!-- ==========================================
-                 CAMPOS DE CLIENTE / PAGO
-        ============================================== -->
         <div class="form-row">
             <label for="clienteId">Cliente registrado (opcional):</label>
             <select id="clienteId" name="clienteId" style="width:100%;">
@@ -209,16 +346,14 @@
 
         <div class="form-row">
             <label>Documento:</label>
-            <!-- solo números, maxlength 10 -->
             <input type="text" name="clienteDocumento" maxlength="10" 
-                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
         </div>
 
         <div class="form-row">
             <label>Teléfono:</label>
-            <!-- solo números, maxlength 10 -->
             <input type="text" name="clienteTelefono" maxlength="10" 
-                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
         </div>
 
         <div class="form-row">
@@ -245,22 +380,58 @@
 
 
 
-<!-- ==========================================
-            SCRIPT: MANEJO DEL CARRITO
-============================================== -->
 <script>
 
 let carrito = [];
+const listaProductos = document.getElementById('listaProductos');
+
+// La cantidad de desplazamiento es el ancho de una tarjeta más el gap
+function getScrollAmount() {
+    // Tomamos la primera tarjeta para medir su ancho
+    const firstCard = listaProductos.querySelector('.card-producto');
+    if (!firstCard) return 0;
+    
+    const cardWidth = firstCard.offsetWidth;
+    // El gap se definió en 20px en el CSS
+    const gap = 20; 
+    
+    // Desplazamos por la mitad del ancho visible (ej. 2.5 productos) para que sea suave y cubra el centro
+    // o simplemente un ancho completo (1 producto) para mayor precisión.
+    return cardWidth + gap; 
+}
+
+
+/* ==============================
+   SCROLL HACIA LA DERECHA (NUEVO)
+============================== */
+function scrollRight() {
+    const scrollAmount = getScrollAmount() * 2; // Desplazamos 2 tarjetas a la vez
+    // Usamos scrollBy para desplazamiento relativo (con animación smooth del CSS)
+    listaProductos.scrollBy({
+        left: scrollAmount, 
+        behavior: 'smooth'
+    });
+}
+
+/* ==============================
+   SCROLL HACIA LA IZQUIERDA (NUEVO)
+============================== */
+function scrollLeft() {
+    const scrollAmount = getScrollAmount() * 2; // Desplazamos 2 tarjetas a la vez
+    // Usamos scrollBy para desplazamiento relativo (con animación smooth del CSS)
+    listaProductos.scrollBy({
+        left: -scrollAmount, 
+        behavior: 'smooth'
+    });
+}
+
 
 /* ==============================
    AGREGAR PRODUCTO AL CARRITO
-   - No realiza venta automática
-   - Solo añade al carrito y crea inputs hidden
+   (Mantenemos la lógica intacta)
 ============================== */
 function agregarAlCarrito(id, nombre, stock, precio, activo) {
 
-    // los valores vienen como strings desde el atributo onclick en Thymeleaf
-    // normalizamos:
     stock = parseInt(stock);
     precio = parseFloat(precio);
     activo = ('' + activo) === 'true' || ('' + activo) === 'True';
@@ -299,7 +470,7 @@ function agregarAlCarrito(id, nombre, stock, precio, activo) {
 
 /* ==============================
    MOSTRAR CARRITO
-   - Actualiza también los inputs hidden (inventarioId[], cantidad[])
+   (Mantenemos la lógica intacta)
 ============================== */
 function renderCarrito() {
 
@@ -311,9 +482,7 @@ function renderCarrito() {
         return;
     }
 
-    // reconstruimos el HTML del carrito por completo (evita errores con índices)
     carrito.forEach((p, index) => {
-        // calcular total línea con separación de miles en JS (solo visual)
         const totalLinea = (p.precio * p.cantidad).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         cont.innerHTML += `
@@ -324,14 +493,13 @@ function renderCarrito() {
                 </div>
 
                 <input type="number"
-                       min="1"
-                       max="${p.stock}"
-                       value="${p.cantidad}"
-                       onchange="cambiarCantidad(${index}, this.value)">
+                        min="1"
+                        max="${p.stock}"
+                        value="${p.cantidad}"
+                        onchange="cambiarCantidad(${index}, this.value)">
 
                 <button type="button" class="btn-remove" onclick="eliminar(${index})">X</button>
 
-                <!-- Campos ocultos para enviar al backend (listas) -->
                 <input type="hidden" name="inventarioId" value="${p.id}">
                 <input type="hidden" name="cantidad" value="${p.cantidad}" class="cantidad-hidden-${index}">
             </div>
@@ -354,8 +522,7 @@ function escapeHtml(str) {
 
 /* ==============================
    CAMBIAR CANTIDAD
-   - Actualiza el hidden correspondiente
-   - Re-renderiza para mantener coherencia
+   (Mantenemos la lógica intacta)
 ============================== */
 function cambiarCantidad(index, nueva) {
     nueva = parseInt(nueva);
@@ -378,6 +545,7 @@ function cambiarCantidad(index, nueva) {
 
 /* ==============================
    ELIMINAR DEL CARRITO
+   (Mantenemos la lógica intacta)
 ============================== */
 function eliminar(index) {
     carrito.splice(index, 1);
@@ -386,8 +554,7 @@ function eliminar(index) {
 
 /* ==============================
    VALIDACIÓN FINAL PARA EVITAR 400
-   - Verifica que existan inputs inventarioId y cantidad
-   - Se asegura que cantidades estén dentro de stock
+   (Mantenemos la lógica intacta)
 ============================== */
 document.getElementById("formVenta").addEventListener("submit", function(e) {
 
@@ -404,25 +571,32 @@ document.getElementById("formVenta").addEventListener("submit", function(e) {
             return;
         }
     }
-
-    // Antes de enviar, sincronizamos los inputs hidden (por si quedaron desincronizados)
-    // Eliminamos cualquier hidden previo creado fuera de render (seguridad)
-    // Nota: renderCarrito ya crea los hidden con nombres "inventarioId" y "cantidad"
-    // por lo tanto al enviar el form Spring recibirá listas inventarioId[] y cantidad[].
 });
 
+
 /* ==============================
-   BUSCADOR DE PRODUCTOS
+   BUSCADOR DE PRODUCTOS (MODIFICADO para SLIDER)
+   - Ahora oculta y muestra los elementos, pero la navegación
+     por flechas sigue moviendo el contenedor completo.
 ============================== */
 document.getElementById("buscador").addEventListener("input", function() {
     let texto = this.value.toLowerCase();
-    let cards = document.querySelectorAll(".card-producto");
+    let cards = listaProductos.querySelectorAll(".card-producto");
 
     cards.forEach(card => {
         let nombre = (card.getAttribute("data-nombre") || "").toLowerCase();
+        
+        // El buscador simplemente oculta/muestra la tarjeta
         card.style.display = nombre.includes(texto) ? "block" : "none";
     });
+    
+    // Si la búsqueda cambia, es bueno hacer un scroll al inicio
+    listaProductos.scrollLeft = 0;
 });
+
+
+// Inicializa el render del carrito
+document.addEventListener('DOMContentLoaded', renderCarrito);
 
 </script>
 

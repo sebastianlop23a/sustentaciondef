@@ -1,29 +1,65 @@
 package SCRUM3.Bj_Byte.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 
 import java.math.BigDecimal;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ExchangeRateService {
 
     private static final String API_URL = "https://open.er-api.com/v6/latest/COP";
     private final RestTemplate restTemplate;
+    private static final Logger logger = LoggerFactory.getLogger(ExchangeRateService.class);
+    
+    // Caché en memoria de tasas: moneda -> tasa
+    private final Map<String, BigDecimal> cachedRates = new ConcurrentHashMap<>();
+    private long lastUpdateTimestamp = 0;
+    
+    // Tasas por defecto (fallback) aproximadas en COP
+    private static final Map<String, Double> DEFAULT_RATES = Map.of(
+        "USD", 0.00025,  // 1 COP ≈ 0.00025 USD
+        "EUR", 0.00023   // 1 COP ≈ 0.00023 EUR
+    );
 
-    public ExchangeRateService() {
-        this.restTemplate = new RestTemplate();
+    public ExchangeRateService(RestTemplateBuilder builder) {
+        // Configurar RestTemplate con timeouts explícitos
+        this.restTemplate = builder
+            .setConnectTimeout(java.time.Duration.ofSeconds(5))
+            .setReadTimeout(java.time.Duration.ofSeconds(5))
+            .requestFactory(this::clientHttpRequestFactory)
+            .build();
+        
+        // Inicializar caché con tasas por defecto
+        DEFAULT_RATES.forEach((currency, rate) -> 
+            cachedRates.put(currency, BigDecimal.valueOf(rate))
+        );
     }
-
+    
+    private ClientHttpRequestFactory clientHttpRequestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000); // 5 segundos
+        factory.setReadTimeout(5000);    // 5 segundos
+        return factory;
+    }
+    
     /**
-     * Convierte desde COP a otra moneda (ej: USD, EUR).
+     * Scheduler: intenta actualizar tasas cada hora en background (sin bloquear)
      */
-    public BigDecimal convertFromCOP(BigDecimal amount, String targetCurrency) {
+    @Scheduled(fixedRate = 3600000) // 1 hora = 3600000 ms
+    public void actualizarTasasEnBackground() {
+        logger.info("Iniciando actualización de tasas de cambio en background...");
         try {
             ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
                     API_URL,
@@ -34,48 +70,97 @@ public class ExchangeRateService {
 
             Map<String, Object> response = responseEntity.getBody();
             if (response != null) {
-                Map<String, Object> rates = (Map<String, Object>) response.get("rates");
-                if (rates != null && rates.containsKey(targetCurrency)) {
-                    double rate = ((Number) rates.get(targetCurrency)).doubleValue();
-                    return amount.multiply(BigDecimal.valueOf(rate));
+                Object ratesObj = response.get("rates");
+                if (ratesObj instanceof Map) {
+                    Map<?, ?> rates = (Map<?, ?>) ratesObj;
+                    
+                    // Actualizar caché con tasas obtenidas
+                    for (String currency : new String[]{"USD", "EUR"}) {
+                        if (rates.containsKey(currency)) {
+                            try {
+                                BigDecimal rateBD = toBigDecimal(rates.get(currency));
+                                cachedRates.put(currency, rateBD);
+                                logger.info("✅ Tasa {} actualizada: {}", currency, rateBD);
+                            } catch (NumberFormatException nfe) {
+                                logger.warn("⚠️ No se pudo parsear tasa {}: {}", currency, rates.get(currency));
+                            }
+                        }
+                    }
+                    
+                    lastUpdateTimestamp = System.currentTimeMillis();
+                    logger.info("✅ Tasas de cambio actualizadas exitosamente");
+                } else {
+                    logger.warn("Formato inesperado de rates: {}", ratesObj);
                 }
             }
         } catch (Exception e) {
-            System.err.println("❌ Error al convertir moneda: " + e.getMessage());
+            logger.warn("⚠️ No se pudo actualizar tasas en background: {}", e.getMessage());
+            // Las tasas en caché se mantienen, no hay problema
         }
-        return BigDecimal.ZERO; // En caso de error
+    }
+
+    /**
+     * Convierte desde COP a otra moneda (ej: USD, EUR).
+     * Usa el caché. Si no existe, usa tasas por defecto.
+     * Las tasas se actualizan cada hora en background.
+     */
+    public BigDecimal convertFromCOP(BigDecimal amount, String targetCurrency) {
+        if (amount == null || targetCurrency == null || targetCurrency.isBlank()) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Intentar usar caché
+        BigDecimal rate = cachedRates.get(targetCurrency);
+        if (rate != null) {
+            logger.debug("Usando tasa en caché para {}: {}", targetCurrency, rate);
+            return amount.multiply(rate);
+        }
+        
+        // Fallback: usar tasas por defecto
+        Double defaultRate = DEFAULT_RATES.get(targetCurrency);
+        if (defaultRate != null) {
+            logger.warn("Tasa no en caché, usando tasa por defecto para {}: {}", targetCurrency, defaultRate);
+            return amount.multiply(BigDecimal.valueOf(defaultRate));
+        }
+        
+        return BigDecimal.ZERO; // En caso de error completo
+    }
+
+    private BigDecimal toBigDecimal(Object val) {
+        if (val instanceof Number) {
+            return new BigDecimal(val.toString());
+        } else if (val instanceof String) {
+            return new BigDecimal((String) val);
+        }
+        throw new NumberFormatException("Valor de tasa no convertible: " + val);
     }
 
     /**
      * Obtiene la fecha de la última actualización en español.
+     * Devuelve la fecha actual (desde la última actualización del caché).
      */
     public String getUltimaActualizacion() {
-        try {
-            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
-                    API_URL,
-                    org.springframework.http.HttpMethod.GET,
-                    null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-
-            Map<String, Object> response = responseEntity.getBody();
-            if (response != null && response.containsKey("time_last_update_utc")) {
-                String fechaOriginal = (String) response.get("time_last_update_utc");
-
-                // Ejemplo: "Sun, 21 Sep 2025 00:02:32 +0000"
-                SimpleDateFormat formatoIngles = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.ENGLISH);
-                Date fecha = formatoIngles.parse(fechaOriginal);
-
-                // Formatear en español
-                SimpleDateFormat formatoEspanol = new SimpleDateFormat(
-                        "EEEE, d 'de' MMMM yyyy HH:mm:ss", new Locale("es", "ES"));
-                return formatoEspanol.format(fecha);
-            }
-        } catch (ParseException e) {
-            System.err.println("⚠️ Error al parsear fecha: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("⚠️ Error al obtener la tasa de cambio: " + e.getMessage());
+        SimpleDateFormat formatoEspanol = new SimpleDateFormat("EEEE, d 'de' MMMM yyyy HH:mm:ss", Locale.forLanguageTag("es-ES"));
+        
+        if (lastUpdateTimestamp > 0) {
+            return formatoEspanol.format(new Date(lastUpdateTimestamp));
         }
-        return "Fecha no disponible";
+        
+        // Si nunca se actualizó, devolver fecha actual
+        return formatoEspanol.format(new Date());
+    }
+    
+    /**
+     * Obtiene el estado actual del caché (tasas y última actualización).
+     * Útil para debugging o endpoints REST.
+     */
+    public Map<String, Object> obtenerEstadoCache() {
+        return Map.of(
+            "tasas", new HashMap<>(cachedRates),
+            "ultimaActualizacion", lastUpdateTimestamp > 0 
+                ? new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.forLanguageTag("es-ES")).format(new Date(lastUpdateTimestamp))
+                : "No actualizado",
+            "estado", cachedRates.isEmpty() ? "SIN CACHÉ" : "CON CACHÉ"
+        );
     }
 }

@@ -3,141 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <title>Lista de Ventas</title>
-    <link rel="stylesheet" th:href="@{/ventas.css}">
+    <link rel="stylesheet" th:href="@{/css/ventas.css}"> 
+
+    <style>
+        /* ========================================================= */
+        /* Estilos CSS Base */
+        /* ========================================================= */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #121212; 
+            color: #eee;
+            min-height: 100vh;
+            display: flex; 
+        }
+        
+        .sidebar {
+            width: 220px; 
+            background-color: #1e1e1e; 
+            padding: 20px; 
+            box-sizing: border-box;
+            position: fixed; 
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000; 
+        }
+        
+        .main-content-wrapper {
+            flex: 1; 
+            margin-left: 240px; 
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center; 
+            align-items: flex-start; 
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+        
+        .sidebar a.button {
+            display: block;
+            padding: 10px;
+            margin-bottom: 5px;
+            text-decoration: none;
+            color: white;
+            background-color: #2b2b2b;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .sidebar a.button:hover {
+            background-color: #3a3a3a;
+        }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #333; padding: 12px; text-align: left; vertical-align: top; font-size: 0.9em; }
+        th { background-color: #2b2b2b; color: #fff; }
+        tr:nth-child(even) { background-color: #1e1e1e; }
+        tr:hover { background-color: #2c2c2c; }
+        
+        .filtros { display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .filtros select { padding: 8px; border-radius: 5px; border: 1px solid #555; background-color: #333; color: #eee; outline: none; cursor: pointer; }
+        .filtros label { white-space: nowrap; }
+        .filtros button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.2s; background-color: #008CBA; color: white; }
+
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .btn-success { background-color: #38761d; color: white; }
+        .btn-danger { background-color: #c0392b; color: white; }
+
+        /* Estilos de paginación */
+        .pagination { display: flex; justify-content: center; align-items: center; margin-top: 20px; gap: 10px; }
+        .pagination button, .pagination a { 
+            background-color: #008CBA; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .pagination a:hover {
+             background-color: #006b8e;
+        }
+        .pagination a.disabled { 
+            background-color: #555; 
+            cursor: not-allowed; 
+            pointer-events: none; /* Deshabilita el click */
+        }
+        
+        .producto-list { padding-left: 15px; margin: 0; list-style: disc; }
+        .acciones-exportar { display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .volver-home { display: block; margin-top: 20px; color: #008CBA; text-decoration: none; }
+        
+        /* ========================================================= */
+        /* ANIMACIÓN DE ENTRADA (Slide-in) 🚀 */
+        /* ========================================================= */
+        @keyframes slideInFromLeft {
+            0% {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Aplica la animación al contenedor de la tabla */
+        .table-responsive {
+            animation: slideInFromLeft 0.5s ease-out forwards; 
+        }
+    </style>
 </head>
 <body>
-<div class="layout">
-    <!-- Sidebar -->
     <div class="sidebar">
         <a th:href="@{/home}" class="button">Inicio</a>
         <a th:href="@{/ventas/registrar}" class="button">Registrar Venta</a>
         <a th:href="@{/producto}" class="button">Productos</a>
         <a th:href="@{/empleado/lista}" class="button">Empleados</a>
+        <a th:href="@{/ventas/lista}" class="button" style="background-color: #008CBA;">Listar Ventas</a>
     </div>
 
-    <!-- Contenedor principal -->
-    <div class="card" style="flex:1; padding:20px;">
-        <h2>Lista de Ventas Realizadas</h2>
+    <div class="main-content-wrapper">
+        <div class="card">
+            <h2>Lista de Ventas Realizadas</h2>
 
-        <!-- Botones de exportar -->
-        <div class="acciones-exportar">
-            <a href="/ventas/exportar" class="btn btn-success">📤 Exportar a Excel</a>
-            <a href="/ventas/exportar-pdf" class="btn btn-danger">📄 Exportar a PDF</a>
+            <div class="acciones-exportar">
+                <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/ventas/exportar(producto=${param.producto}, empleado=${param.empleado}, fecha=${param.fecha})}" 
+                   class="btn btn-success">📤 Exportar a Excel</a>
+                
+                <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{/ventas/reporte-ventas-globales}" 
+                   class="btn btn-danger">📊 Reporte Ventas Globales</a>
+                
+                <span th:unless="${session.empleadoLogueado.rolId == 1}" style="color:#aaa; font-size:0.9em;">[Solo lectura - Reportes disponibles para Administrador]</span>
+            </div>
+            
+            <form id="filterForm" th:action="@{/ventas/lista}" method="get" class="filtros">
+                <input type="hidden" name="size" th:value="${ventas.size}">
+                
+                <label>Producto:</label>
+                <select name="producto" id="productoFiltro">
+                    <option value="">Todos</option>
+                    <th:block th:each="prodName : ${productos}">
+                        <option th:value="${prodName}" 
+                                th:text="${prodName}"
+                                th:selected="${param.producto != null and param.producto[0] == prodName}">
+                        </option>
+                    </th:block>
+                </select>
+
+                <label>Empleado:</label>
+                <select name="empleado" id="empleadoFiltro">
+                    <option value="">Todos</option>
+                    <th:block th:each="empName : ${empleados}">
+                        <option th:value="${empName}" 
+                                th:text="${empName}"
+                                th:selected="${param.empleado != null and param.empleado[0] == empName}">
+                        </option>
+                    </th:block>
+                </select>
+
+                <label>Fecha:</label>
+                <select name="fecha" id="fechaFiltro">
+                    <option value="">Todas</option>
+                    <th:block th:each="date : ${fechas}">
+                        <option th:value="${date}" 
+                                th:text="${date}"
+                                th:selected="${param.fecha != null and param.fecha[0] == date}">
+                        </option>
+                    </th:block>
+                </select>
+                
+                <button type="submit" class="btn">Aplicar Filtros</button>
+            </form>
+            
+            <div th:if="${ventas.content.isEmpty()}">
+                <p>No se encontraron ventas con los filtros aplicados.</p>
+            </div>
+
+            <div class="table-responsive" th:if="${!ventas.content.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Venta</th>
+                            <th>Productos</th>
+                            <th>Cant. Artículos</th>
+                            <th>Empleado</th>
+                            <th>Proveedores</th>
+                            <th>Total Venta</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="venta : ${ventas.content}">
+                            
+                            <td th:text="${venta.id}">1</td>
+
+                            <td>
+                                <ul class="producto-list">
+                                    <li th:each="detalle : ${venta.detalles}"
+                                        th:text="${detalle.inventario != null && detalle.inventario.producto != null ? detalle.inventario.producto.nombre + ' (x' + detalle.cantidad + ')' : 'Sin producto'}">
+                                        Producto
+                                    </li>
+                                </ul>
+                            </td>
+
+                            <td th:text="${#aggregates.sum(venta.detalles.![cantidad])}">Cantidad</td>
+
+                            <td th:text="${venta.nombreEmpleado != null && venta.nombreEmpleado != '' ? #strings.trim(venta.nombreEmpleado) : 'Sin empleado'}">Empleado</td>
+
+                            <td>
+                                <span th:if="${#lists.isEmpty(venta.proveedores)}">—</span>
+                                <span th:each="prov,iterStat : ${venta.proveedores}">
+                                    <span th:text="${prov.nombre}">Proveedor</span>
+                                    <span th:if="${!iterStat.last}">, </span>
+                                </span>
+                            </td>
+
+                            <td th:text="${venta.totalVenta != null ? '$' + #numbers.formatDecimal(venta.totalVenta, 0, 'COMMA', 2, 'POINT') : '$0.00'}">Total</td>
+
+                            <td th:text="${venta.fecha != null ? #temporals.format(venta.fecha, 'yyyy-MM-dd HH:mm') : 'Sin fecha'}">Fecha</td>
+
+                            <td>
+                                <a th:if="${session.empleadoLogueado.rolId == 1}" th:href="@{'/ventas/exportar-pdf/' + ${venta.id}}" class="btn btn-danger">📄 PDF</a>
+                                <span th:unless="${session.empleadoLogueado.rolId == 1}" style="color:#aaa;">[Ver PDF]</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" th:if="${!ventas.content.isEmpty() and ventas.totalPages > 1}">
+                
+                <a th:href="@{/ventas/lista(page=${ventas.number - 1}, size=${ventas.size}, producto=${param.producto}, empleado=${param.empleado}, fecha=${param.fecha})}" 
+                   th:classappend="${ventas.first} ? 'disabled'"
+                   th:text="'← Anterior'">Anterior</a>
+                    
+                <span id="pageInfo" th:text="'Página ' + ${ventas.number + 1} + ' de ' + ${ventas.totalPages}">Página 1 de 1</span>
+                
+                <a th:href="@{/ventas/lista(page=${ventas.number + 1}, size=${ventas.size}, producto=${param.producto}, empleado=${param.empleado}, fecha=${param.fecha})}" 
+                   th:classappend="${ventas.last} ? 'disabled'"
+                   th:text="'Siguiente →'">Siguiente</a>
+            </div>
+
+            <a th:href="@{/home}" class="volver-home">← Volver al Home</a>
         </div>
-
-        <!-- Filtros -->
-        <div class="filtros">
-            <label>Producto:</label>
-            <select id="productoFiltro" onchange="filtrar()">
-                <option value="">Todos</option>
-                <th:block th:each="producto : ${productos}">
-                    <option th:value="${producto}" th:text="${producto}"></option>
-                </th:block>
-            </select>
-
-            <label>Empleado:</label>
-            <select id="empleadoFiltro" onchange="filtrar()">
-                <option value="">Todos</option>
-                <th:block th:each="empleado : ${empleados}">
-                    <option th:value="${empleado}" th:text="${empleado}"></option>
-                </th:block>
-            </select>
-
-            <label>Fecha:</label>
-            <select id="fechaFiltro" onchange="filtrar()">
-                <option value="">Todas</option>
-                <th:block th:each="fecha : ${fechas}">
-                    <option th:value="${fecha}" th:text="${fecha}"></option>
-                </th:block>
-            </select>
-        </div>
-
-        <!-- Tabla de ventas -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID Venta</th>
-                    <th>Productos</th>
-                    <th>Cantidad Total</th>
-                    <th>Empleado</th>
-                    <th>Proveedores</th>
-                    <th>Total Venta</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tablaVentas">
-                <tr th:each="venta : ${ventas}">
-                    <td th:text="${venta.id}">1</td>
-
-                    <!-- Productos: lista de nombres -->
-                    <td>
-                        <ul>
-                            <li th:each="detalle : ${venta.detalles}"
-                                th:text="${detalle.inventario != null && detalle.inventario.producto != null ? detalle.inventario.producto.nombre : 'Sin producto'}">
-                                Producto
-                            </li>
-                        </ul>
-                    </td>
-
-                    <!-- Cantidad Total de items vendidos -->
-                    <td th:text="${#lists.size(venta.detalles)}">Cantidad</td>
-
-                    <!-- Empleado: usar nombreEmpleado en lugar de empleado.nombre -->
-                    <td th:text="${venta.nombreEmpleado != null && venta.nombreEmpleado != '' ? venta.nombreEmpleado : 'Sin empleado'}">Empleado</td>
-
-                    <!-- Proveedores: nombres separados por comas -->
-                    <td>
-                        <span th:if="${#lists.isEmpty(venta.proveedores)}">—</span>
-                        <span th:each="prov,iterStat : ${venta.proveedores}">
-                            <span th:text="${prov.nombre}">Proveedor</span>
-                            <span th:if="${!iterStat.last}">, </span>
-                        </span>
-                    </td>
-
-                    <!-- Total venta -->
-                    <td th:text="${venta.totalVenta != null ? '$' + #numbers.formatDecimal(venta.totalVenta, 0, 'COMMA', 0, 'POINT') : '$0'}">Total</td>
-
-                    <!-- Fecha -->
-                    <td th:text="${venta.fecha != null ? #temporals.format(venta.fecha, 'yyyy-MM-dd HH:mm') : 'Sin fecha'}">Fecha</td>
-
-                    <!-- Acciones -->
-                    <td>
-                        <a th:href="@{'/ventas/exportar-pdf/' + ${venta.id}}" class="btn btn-danger">📄 PDF</a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Volver al home -->
-        <a th:href="@{/home}" class="volver-home">← Volver al Home</a>
     </div>
-</div>
-
-<script>
-    function filtrar() {
-        const producto = document.getElementById("productoFiltro").value.toLowerCase();
-        const empleado = document.getElementById("empleadoFiltro").value.toLowerCase();
-        const fecha = document.getElementById("fechaFiltro").value.toLowerCase();
-
-        const filas = document.querySelectorAll("#tablaVentas tr");
-
-        filas.forEach(fila => {
-            const columnas = fila.getElementsByTagName("td");
-            if (columnas.length < 8) return;
-
-            const prodText = Array.from(columnas[1].getElementsByTagName("li"))
-                                  .map(li => li.textContent.toLowerCase()).join(", ");
-            const empText = columnas[3].textContent.toLowerCase();
-            const fechaText = columnas[6].textContent.substring(0, 10).toLowerCase();
-
-            const coincideProducto = !producto || prodText.includes(producto);scroll
-            const coincideEmpleado = !empleado || empText === empleado;
-            const coincideFecha = !fecha || fechaText === fecha;
-
-            fila.style.display = (coincideProducto && coincideEmpleado && coincideFecha) ? "" : "none";
-        });
-    }
-</script>
 </body>
 </html>

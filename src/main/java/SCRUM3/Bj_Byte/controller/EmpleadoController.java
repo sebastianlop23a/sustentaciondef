@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+
 
 @Controller
 @RequestMapping("/empleado")
@@ -27,7 +27,7 @@ public class EmpleadoController {
     // Mostrar página de login
     @GetMapping("/login")
     public String mostrarLogin() {
-        return "login"; // login.html en templates
+        return "index"; // index.html en templates (anteriormente login.html)
     }
 
     // Procesar login
@@ -36,19 +36,27 @@ public class EmpleadoController {
                                 @RequestParam String contrasena,
                                 HttpSession session,
                                 Model model) {
-        Optional<Empleado> empleadoOpt = empleadoRepository.findByCorreoAndActivoTrue(correo);
+        try {
+            // Usar la nueva query que retorna lista (maneja mejor los duplicados)
+            List<Empleado> empleados = empleadoRepository.findByCorreoAndActivoTrueOrderByIdDesc(correo);
 
-        if (empleadoOpt.isPresent()) {
-            Empleado empleado = empleadoOpt.get();
-            
-            if (passwordEncoder.matches(contrasena, empleado.getContrasena())) {
-                session.setAttribute("empleadoLogueado", empleado);
-                return "redirect:/home";
+            if (!empleados.isEmpty()) {
+                // Tomar el primero (el más reciente por ID)
+                Empleado empleado = empleados.get(0);
+                
+                if (passwordEncoder.matches(contrasena, empleado.getContrasena())) {
+                    session.setAttribute("empleadoLogueado", empleado);
+                    return "redirect:/home";
+                }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Error al procesar el login. Contacte al administrador.");
+            return "index";
         }
 
         model.addAttribute("error", "Credenciales inválidas o empleado inactivo");
-        return "login";
+        return "index";
     }
 
     // Mostrar formulario de registro
